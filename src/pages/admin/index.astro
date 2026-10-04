@@ -22,7 +22,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
         <div class="fields-three"><label>Category<select name="category">{CATEGORIES.map(c=><option value={c}>{categoryName(c)}</option>)}</select></label><label>Grid size<select name="tile_size">{SIZES.map(s=><option>{s}</option>)}</select></label><label>Tile background<input name="colour" type="color" value="#d9e4de" /></label></div>
         <fieldset><legend>License & credits</legend><div class="fields-two"><label>License<select name="license">{LICENSES.map(l=><option>{l}</option>)}</select></label><label>Creator<input name="creator" maxlength="200" /></label></div><div class="fields-two"><label>Source URL<input name="source_url" type="url" placeholder="https://…" /></label><label>License URL<input name="license_url" type="url" placeholder="https://creativecommons.org/…" /></label></div><label>Attribution<textarea name="attribution" rows="2" maxlength="2000" placeholder="Credits and any modifications made to the original asset."></textarea></label></fieldset>
         <div class="save-row"><label class="check-label"><input type="checkbox" name="published" value="1" />Publish in the public library</label><button type="submit" class="primary" id="save-asset">Save asset</button></div>
-        <progress id="upload-progress" max="100" value="0" hidden></progress>
+        <progress id="upload-progress" aria-label="Asset upload and conversion progress" max="100" value="0" hidden></progress>
         <p id="save-status" role="status" aria-live="polite" data-state=""></p>
         <a id="view-asset" hidden>View asset ↗</a>
         <section id="conversion-jobs" aria-label="Recent model conversions" hidden><h3>Model conversions</h3><div id="conversion-list"></div></section>
@@ -145,6 +145,14 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   .conversion-row { margin:12px 0; padding:10px; border-radius:8px; background:var(--rule-soft); }
   .conversion-row p { margin:5px 0; font-size:13px; }
   .conversion-row progress,#upload-progress { width:100%; height:6px; accent-color:var(--ink); }
+  progress { appearance:none; border:0; border-radius:6px; background:var(--rule); overflow:hidden; }
+  progress::-webkit-progress-bar { background:var(--rule); border-radius:6px; }
+  progress::-webkit-progress-value { background:var(--ink); border-radius:6px; }
+  progress::-moz-progress-bar { background:var(--ink); }
+  progress:indeterminate { background:linear-gradient(90deg,transparent,var(--ink),transparent) 0 0 / 40% 100% no-repeat,var(--rule); animation:conversion-progress 1.4s ease-in-out infinite alternate; }
+  progress:indeterminate::-webkit-progress-bar,progress:indeterminate::-webkit-progress-value { background:transparent; }
+  @keyframes conversion-progress { to { background-position:100% 0; } }
+  @media(prefers-reduced-motion:reduce) { progress:indeterminate { animation:none; background-position:50% 0; } }
   .admin-shell { max-width:1320px; margin:24px auto; padding:0 24px; font-family:'Atkinson',sans-serif; font-size:15px; }
   .admin-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:28px; }
   .admin-actions { display:flex; gap:10px; align-items:center; }
