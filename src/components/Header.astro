@@ -1,0 +1,21 @@
+---
+const query=Astro.url.searchParams.get('q') ?? '';
+---
+<header class="site-header">
+  <a href="/" title="Tana" aria-label="Tana — home" class="brand" transition:name="site-brand"><img src="/favicon.svg" width="44" height="44" alt="" /><span>tana</span></a>
+  <form action="/" method="get" role="search" class="asset-search">
+    <label class="sr-only" for="library-search">Search models</label>
+    <input id="library-search" name="q" type="search" placeholder="Search assets…" value={query} />
+    <button type="submit" aria-label="Find"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
+  </form>
+</header>
+<style>
+  .site-header{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:84px;padding:0 3%;}
+  .brand{display:flex;align-items:center;gap:10px;font-size:26px;letter-spacing:-1px;text-decoration:none;color:var(--ink);}
+  .brand img{border-radius:12px;}
+  .asset-search{display:flex;align-items:center;width:min(360px,55%);border:1px solid var(--rule);border-radius:10px;background:var(--panel);overflow:hidden;}
+  input{width:100%;min-width:0;padding:9px 12px;background:transparent;border:0;color:var(--ink);font:inherit;font-size:14px;}
+  input::placeholder{color:var(--ink-faint);}
+  button{display:flex;align-items:center;justify-content:center;padding:10px 12px;background:transparent;border:0;color:var(--ink-soft);cursor:pointer;}
+  @media(max-width:480px){.site-header{gap:12px;}.brand{font-size:22px;gap:5px;}.brand img{width:32px;height:32px;}.asset-search{width:62%;}}
+</style>

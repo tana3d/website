@@ -1,0 +1,35 @@
+---
+import Layout from '../layouts/Page.astro';
+import release from '../data/releases.json';
+import '../styles/download.css';
+interface ReleaseFile { platform: string; label: string; url: string; size?: string; sha256?: string; }
+const files=release.files as ReleaseFile[];
+const primary=files[0];
+---
+<Layout title="Download Studio — tana" description="Create worlds, direct characters, and turn performances into films with Tana Studio.">
+  <main class="page download-page">
+    <section class="hero" aria-labelledby="download-title">
+      <div class="eyebrow">tana studio</div>
+      <h1 id="download-title">Your world.<br />Your story.</h1>
+      <p class="lede">Build a scene, direct your characters, and record their performances. Find a new angle, layer the action, and turn it all into a film—with an AI assistant beside you.</p>
+      <div class="cta">
+        {primary ? <a class="big" href={primary.url} data-platform={primary.platform}>Download for {primary.label} <span aria-hidden="true">↓</span></a> : <button class="big disabled" disabled>Desktop download coming soon</button>}
+        <p class="meta">{release.version ? `Version ${release.version} · early preview` : 'Studio is in development. Installers haven’t been published yet.'}</p>
+        {files.length > 1 && <nav class="others" aria-label="Other platforms">{files.slice(1).map(file=><a href={file.url}>{file.label}</a>)}</nav>}
+      </div>
+    </section>
+    <figure class="shot"><div class="window"><img src="/download/studio.webp" width="1500" height="960" alt="Tana Studio with the AI conversation beside a 3D scene and layered performance timeline." /></div><figcaption class="meta">Development preview. Scene includes <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CesiumMan">Cesium Man, © 2017 Cesium</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; display scale and animation label adjusted.</figcaption></figure>
+    <section class="canary" aria-labelledby="preview-title">
+      <div><h2 id="preview-title">Studio <span class="pill">preview</span></h2><p>A place to make a world and tell a story. Move between directing the action and framing your shot, then export your film.</p><p class="meta">The first desktop release will appear here when it’s ready.</p></div>
+      <ul class="files" aria-label="Studio downloads">
+        {['macOS Apple Silicon','macOS Intel','Windows','Linux'].map(label=>{const file=files.find(f=>f.label===label);return <li><span><b>{label}</b><span class="sub">{file?.size ?? 'Installer not yet available'}</span></span>{file ? <a href={file.url}>Download ↓</a> : <span class="sub">coming soon</span>}</li>;})}
+      </ul>
+    </section>
+    <section class="notes" aria-label="What you can do in Studio"><div class="note"><h3>Build your world</h3>Bring in models from the library or import your own. Ask the assistant to find and place what you need.</div><div class="note"><h3>Direct the action</h3>Record character performances as layers. Rewind and watch them from another camera angle.</div><div class="note"><h3>Make the film</h3>Arrange camera views, split clips, add transitions, and export landscape or vertical video.</div></section>
+  </main>
+</Layout>
+<style>
+  .download-page { width:100%; max-width:none; padding-bottom:40px; margin:0; }
+  .download-page :global(.hero) { margin:0 auto; }
+  .download-page :global(.disabled) { opacity:.65; border:0; font:inherit; font-size:16px; }
+</style>

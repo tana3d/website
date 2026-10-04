@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local work only. Never enable this on Cloudflare.
+LOCAL_ADMIN=true

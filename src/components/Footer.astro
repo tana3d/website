@@ -1,0 +1,52 @@
+---
+const today=new Date();
+---
+<footer class="site-footer" transition:name="site-footer" transition:persist="site-footer" transition:animate="none">
+  <div class="footer-content">
+    <span class="credit"><img src="/sami.png" alt="" width="22" height="22" class="avatar" /><span>© {today.getFullYear()} <a href="https://samifou.ad">Sami Fouad</a><span class="credit-os"> · studio is <a href="https://github.com/tana3d/studio">open source</a>.</span></span></span>
+    <div class="footer-links">
+      <nav class="footer-nav-links" aria-label="Footer"><a href="/">library</a><a href="/download">download</a><a href="/blog">blog</a></nav>
+      <span class="footer-controls"><button class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode"><svg class="moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" /></svg><svg class="sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button></span>
+    </div>
+  </div>
+</footer>
+<script>
+  const syncTheme=()=>{
+    const dark=document.documentElement.dataset.theme==='dark';
+    const button=document.querySelector<HTMLButtonElement>('.theme-toggle');
+    if(button){button.setAttribute('aria-pressed',String(dark));button.setAttribute('aria-label',`Switch to ${dark?'light':'dark'} mode`);button.title=button.getAttribute('aria-label')!;}
+  };
+  function initializeTheme(){
+    syncTheme();
+    const button=document.querySelector<HTMLButtonElement>('.theme-toggle');
+    if(!button || button.dataset.bound)return;
+    button.dataset.bound='true';
+    button.addEventListener('click',()=>{
+      const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';
+      document.documentElement.dataset.theme=theme;
+      try{localStorage.setItem('tana-theme',theme);}catch{}
+      syncTheme();
+    });
+  }
+  document.addEventListener('astro:before-swap',(event)=>{
+    (event as unknown as {newDocument:Document}).newDocument.documentElement.dataset.theme=document.documentElement.dataset.theme;
+  });
+  document.addEventListener('astro:page-load',initializeTheme);
+  initializeTheme();
+</script>
+<style>
+  /* Layout copied from zega.dev's footer, omitting its central logo. */
+  .site-footer{position:fixed;inset:auto 0 0;z-index:20;width:100%;margin:0;background:var(--ground);border-top:1px solid var(--rule);padding:22px clamp(24px,4.375vw,64px) 34px;}
+  .footer-content{max-width:1280px;margin-inline:auto;font-family:'IBM Plex Mono',ui-monospace,monospace;color:var(--ink-soft);grid-template-columns:1fr auto;align-items:center;gap:16px;font-size:12.5px;display:grid;}
+  .credit{justify-self:start;align-items:center;gap:8px;min-width:0;display:flex;}
+  a{color:inherit;text-decoration:none;}.credit a{color:var(--ink);}
+  .credit .avatar{border-radius:50%;flex-shrink:0;display:block;width:22px;height:22px;}
+  .footer-links{justify-self:end;align-items:center;gap:18px;display:flex;}
+  .footer-nav-links,.footer-controls{align-items:center;gap:18px;display:flex;}
+  .footer-links a:hover{color:var(--ink);}
+  .theme-toggle{box-sizing:border-box;border:0;background:transparent;border-radius:4px;color:inherit;cursor:pointer;display:inline-flex;height:32px;justify-content:center;align-items:center;padding:8px;width:32px;}
+  .theme-toggle:hover{background:var(--rule-soft);}
+  .sun{display:none;}:global([data-theme="dark"]) .sun{display:block;}:global([data-theme="dark"]) .moon{display:none;}
+  @media(max-width:760px){.footer-content{text-align:center;grid-template-columns:minmax(0,1fr);gap:22px;}.credit,.footer-links{justify-self:center;}.credit{justify-content:center;}.footer-links{flex-direction:column;gap:14px;}.footer-nav-links,.footer-controls{flex-wrap:wrap;justify-content:center;}.site-footer{padding-bottom:20px;padding-top:16px;}}
+  @media(max-width:380px){.credit-os{display:block;}}
+</style>

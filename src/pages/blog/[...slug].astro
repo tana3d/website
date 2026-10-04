@@ -1,0 +1,164 @@
+---
+import { getCollection, render } from 'astro:content'
+import Layout from '../../layouts/Page.astro'
+import FormattedDate from '../../components/FormattedDate.astro'
+
+export const prerender = true
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog')
+	return posts.map((post) => ({
+		params: { slug: post.id },
+		props: post,
+	}))
+}
+
+const post = Astro.props
+const { Content } = await render(post)
+---
+
+<Layout title={`${post.data.title} — tana`} description={post.data.description}>
+	<div class="bg-slate-100 w-[90%] m-auto pt-4 pb-8">
+		<article class="max-w-4xl mx-auto">
+			<header class="mb-8"><h1 class="text-4xl">{post.data.title}</h1><p>{post.data.description}</p><FormattedDate date={post.data.pubDate} /></header>
+			{post.data.heroImage && (
+				<>
+					<div class="w-full h-[550px] overflow-hidden rounded-xl">
+						<img
+							src={post.data.heroImage}
+							alt={post.data.title}
+							class="w-full h-full object-cover"
+						/>
+					</div>
+
+					{/* Overlapping Header - using negative margin to pull up into hero */}
+					<div class="relative w-[90%] md:w-[75%] mx-auto bg-white rounded-xl shadow-lg p-8 mb-8 mt-[-450px] md:mt-[-350px] lg:mt-[-350px]">
+						<div class="text-4xl font-bold pb-5">{post.data.title}</div>
+
+						<div class="flex items-center gap-4 text-sm text-gray-600 mb-8">
+							<span class="flex items-center gap-2">
+								<img src="/favicon.svg" class="w-6 h-6 rounded-full" alt={post.data.author}>
+								{post.data.author}
+							</span>
+							<span>•</span>
+							<FormattedDate date={post.data.pubDate} />
+							{post.data.updatedDate && (
+								<>
+									<span>•</span>
+									<span>Updated: <FormattedDate date={post.data.updatedDate} /></span>
+								</>
+							)}
+						</div>
+
+						<div class="flex flex-wrap gap-2 mb-0">
+							{post.data.tags.map((tag) => (
+								<a
+									href={`/tag/${tag}`}
+									class="inline-block bg-slate-100 hover:bg-slate-200 rounded-full px-3 py-2 text-sm text-gray-700 transition-colors"
+								>
+									{tag}
+								</a>
+							))}
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* Divider */}
+			<div class="flex justify-center mb-7">
+				<hr class="w-[80%] border-t border-gray-300" />
+			</div>
+
+			{/* Post Content */}
+			<div class="bg-white rounded-xl shadow-sm text-sm md:text-lg p-8 mb-8">
+				<div class="prose prose-slate max-w-none">
+					<Content />
+				</div>
+			</div>
+
+			{/* Back to blog link */}
+			<div class="mt-8 text-center">
+				<a
+					href="/blog"
+					class="inline-block bg-white hover:bg-gray-50 rounded-lg px-6 py-3 text-gray-700 transition-colors"
+				>
+					← Back to blog
+				</a>
+			</div>
+		</article>
+	</div>
+</Layout>
+
+<style is:global>
+	.prose h1 {
+		font-size: 1.875rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+		margin-top: 2rem;
+	}
+	.prose h2 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-bottom: 0.75rem;
+		margin-top: 1.5rem;
+	}
+	.prose h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin-bottom: 0.5rem;
+		margin-top: 1.25rem;
+	}
+	.prose p {
+		margin-bottom: 1rem;
+		color: #374151;
+		line-height: 1.75;
+	}
+	.prose ul, .prose ol {
+		margin-left: 1.5rem;
+		margin-bottom: 1rem;
+	}
+	.prose li {
+		margin-bottom: 0.5rem;
+	}
+	.prose a {
+		color: #2563eb;
+		text-decoration: none;
+	}
+	.prose a:hover {
+		text-decoration: underline;
+	}
+	.prose code {
+		background-color: #1f2937;
+		color: #4ade80;
+		padding: 0.125rem 0.5rem;
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+		font-family: monospace;
+	}
+	.prose pre {
+		background-color: #111827;
+		color: #f3f4f6;
+		padding: 1rem;
+		border-radius: 0.5rem;
+		overflow-x: auto;
+		margin-bottom: 1rem;
+		box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+	}
+	.prose pre code {
+		background-color: transparent;
+		color: #f3f4f6;
+		padding: 0;
+	}
+	.prose blockquote {
+		border-left: 4px solid #9ca3af;
+		padding-left: 1rem;
+		font-style: italic;
+		margin: 1rem 0;
+		color: #4b5563;
+	}
+	.prose img {
+		border-radius: 0.5rem;
+		box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+		margin: 1.5rem 0;
+	}
+</style>

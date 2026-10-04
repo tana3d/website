@@ -1,0 +1,10 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Page.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+export const prerender=true;
+export async function getStaticPaths() {const posts=await getCollection('blog');return [...new Set(posts.flatMap(p=>p.data.tags))].map(tag=>({params:{tag}}));}
+const {tag}=Astro.params;
+const posts=(await getCollection('blog')).filter(p=>p.data.tags.includes(tag!));
+---
+<Layout title={`#${tag} — tana`}><main><a href="/blog">← blog</a><h1>#{tag}</h1>{posts.map(post=><article><a href={`/blog/${post.id}`}><h2>{post.data.title}</h2></a><FormattedDate date={post.data.pubDate}/><p>{post.data.description}</p></article>)}</main></Layout>
