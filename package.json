@@ -32,6 +32,7 @@
     "@cloudflare/workers-types": "latest",
     "@gltf-transform/core": "latest",
     "@gltf-transform/extensions": "latest",
+    "@gltf-transform/functions": "^4.5.1",
     "@playwright/test": "latest",
     "@types/three": "latest",
     "gifenc": "^1.0.3",
