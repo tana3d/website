@@ -248,3 +248,4 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 /* Short pages reach the viewport bottom; long pages scroll the footer naturally. */
 body{display:flex;flex-direction:column;min-height:100dvh;}
 body > header,body > main,body > div{flex-shrink:0;}
+body > main,body > div{flex-grow:1;}
