@@ -17,6 +17,8 @@ let unavailable = false;
 try { catalog = await listAssets(env as unknown as Bindings, Astro.url.searchParams); } catch { unavailable = true; }
 // Every visit gets a new shuffle, including refreshes through an edge cache.
 Astro.response.headers.set('Cache-Control','no-store');
+const nextParams = new URLSearchParams(Astro.url.searchParams);
+nextParams.set('page',String(catalog.page + 1));
 ---
 
 <!doctype html>
@@ -29,12 +31,22 @@ Astro.response.headers.set('Cache-Control','no-store');
 		<div class="p-0 w-screen m-0 max-w-full ">
           <ProjectList projects={catalog.assets} />
           {unavailable ? <p class="library-message" role="status">The library is temporarily unavailable. Please try again shortly.</p> : !catalog.total ? <p class="library-message">{Astro.url.search ? 'No models matched. Try another search.' : 'The library is getting its first assets. Come back soon.'}</p> : null}
-          {catalog.pages > 1 && <nav class="pagination" aria-label="Library pages">{Array.from({length:catalog.pages},(_,i)=>i+1).filter(p=>Math.abs(p-catalog.page)<3||p===1||p===catalog.pages).map(p=>{const params=new URLSearchParams(Astro.url.searchParams);params.set('page',String(p));return <a href={`/?${params}`} aria-current={p===catalog.page ? 'page' : undefined}>{p}</a>;})}</nav>}
+          {!unavailable && catalog.total > 0 && <div class="library-loader" data-library-loader data-page={catalog.page} data-pages={catalog.pages}>
+            <p data-library-status role="status" aria-live="polite"></p>
+            <a data-load-more href={`/?${nextParams}`} hidden={catalog.page >= catalog.pages}>Load more assets</a>
+          </div>}
+
 		</div>
 		<Footer />
 	</body>
 </html>
+<script>
+  import '../scripts/library-scroll';
+</script>
 <style>
-  .library-message,.pagination { margin:30px 3%; font-size:15px; }
-  .pagination { display:flex; gap:12px; }
+  .library-message,.library-loader { margin:30px 3%; font-size:15px; }
+  .library-loader { text-align:center; min-height:32px; }
+  .library-loader p:empty { display:none; }
+  .library-loader a { display:inline-block; padding:10px 20px; border:1px solid currentColor; border-radius:8px; }
+  .library-loader a[hidden] { display:none; }
 </style>
