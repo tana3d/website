@@ -48,10 +48,9 @@ It does not bypass the app's authentication. Never put the token in the repo.
 
 Cloudflare Workers is connected to `tana3d/website`, production branch `main`.
 The current Astro Cloudflare adapter targets Workers rather than Pages.
-The production trigger watches pushes to `main`. Its existing saved deployment
-tokens have been revoked or rolled; select a valid token in the Worker's
-Settings → Builds → API token to enable automatic deployment. Direct deployment
-with the authorized local Cloudflare token works.
+Cloudflare's Git connection watches pushes to `main` and handles deployment.
+There are no GitHub Actions deployment workflows or local deployment scripts.
+Publish website changes by committing and pushing to `main`.
 
 1. The R2 bucket **tana-assets** and D1 database **tana-library** have been
    provisioned in Sami's Cloudflare account. Binding names are **DB** and **LIBRARY**.
