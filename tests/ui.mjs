@@ -18,6 +18,8 @@ try {
   await page.waitForFunction(()=>[...document.querySelectorAll('.wrapper img')].filter(img=>img.getBoundingClientRect().top<innerHeight).every(img=>img.complete&&img.naturalWidth>0));
   await expect(page.getByText('Make it yours. Create with friends.',{exact:false})).toBeVisible();
   assert.equal(await page.locator('.site-header nav').count(),0);
+  await expect(page.locator('.brand .black-mark')).toBeVisible();
+  await expect(page.locator('.brand .white-mark')).toBeHidden();
   assert.equal(await page.locator('.library-filter').count(),0);
   await expect(page.locator('.feature-caption')).toContainText('Studio is free & open source.');
   await expect(page.locator('.chatgpt-name')).toContainText('ChatGPT');
@@ -26,12 +28,15 @@ try {
   assert.equal(await page.locator('.feature-caption').evaluate(el=>getComputedStyle(el).color),'rgb(255, 255, 255)');
   assert.equal(await page.locator('.credit .avatar').getAttribute('src'),'/sami.png');
   await expect(page.locator('.credit-os')).toHaveText(' · studio is open source.');
-  assert.equal(await page.locator('.site-footer').evaluate(el=>getComputedStyle(el).position),'fixed');
-  assert.equal(await page.locator('.site-footer').evaluate(el=>Math.round(el.getBoundingClientRect().bottom)),1000);
+  assert.equal(await page.locator('.site-footer').evaluate(el=>getComputedStyle(el).position),'static');
+  assert.equal(await page.locator('.site-footer').evaluate(el=>Math.round(el.getBoundingClientRect().bottom)),await page.evaluate(()=>document.documentElement.scrollHeight));
   await page.locator('.site-footer').evaluate(el=>el.dataset.testIdentity='persisted');
   await page.screenshot({path:'.tmp/tana-library-desktop.png',fullPage:true});
   await page.getByRole('button',{name:'Switch to dark mode'}).click();
   assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+  await expect(page.locator('.brand .white-mark')).toBeVisible();
+  await expect(page.locator('.brand .black-mark')).toBeHidden();
+  assert.equal(await page.locator('#tana-favicon').getAttribute('href'),'/favicon-light.png');
   await page.screenshot({path:'.tmp/tana-library-dark.png',fullPage:true});
   await page.reload();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   await page.getByRole('button',{name:'Switch to light mode'}).click();
@@ -43,6 +48,7 @@ try {
   await expect(page).toHaveURL(/\/search\?q=robot/);
   assert.equal(await page.locator('[data-pinned]').count(),0);
   await expect(page.getByLabel('Category',{exact:true})).toBeVisible();
+  assert.equal(await page.locator('.site-footer').evaluate(el=>Math.round(el.getBoundingClientRect().bottom)),1000);
   await expect(page.locator('.asset-tile')).toHaveCount(1);await page.getByRole('link',{name:'View Expressive robot'}).click();
   await expect(page.getByRole('heading',{name:'Expressive robot',exact:true})).toBeVisible();
   await page.waitForFunction(()=>document.querySelector('model-viewer')?.loaded,{timeout:30000});

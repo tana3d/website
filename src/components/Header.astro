@@ -3,7 +3,7 @@ const publicSite=Astro.url.hostname==='admin.tana.gg'?'https://tana.gg':'';
 const query=Astro.url.searchParams.get('q') ?? '';
 ---
 <header class="site-header">
-  <a href={publicSite+"/"} title="Tana" aria-label="Tana — home" class="brand" transition:name="site-brand"><img src="/brand/tana-128.png" width="44" height="44" alt="" /><span>tana</span></a>
+  <a href={publicSite+"/"} title="Tana" aria-label="Tana — home" class="brand" transition:name="site-brand"><span class="brand-symbol"><img class="black-mark" src="/brand/tana-128.png" width="44" height="44" alt="" /><img class="white-mark" src="/brand/tana-light-128.png" width="44" height="44" alt="" /></span><span>tana</span></a>
   <form action={publicSite+"/search"} method="get" role="search" class="asset-search">
     <label class="sr-only" for="library-search">Search models</label>
     <input id="library-search" name="q" type="search" placeholder="Search assets…" value={query} />
@@ -14,6 +14,11 @@ const query=Astro.url.searchParams.get('q') ?? '';
   .site-header{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:84px;padding:0 3%;}
   .brand{display:flex;align-items:center;gap:10px;font-size:26px;letter-spacing:-1px;text-decoration:none;color:var(--ink);}
   .brand img{object-fit:contain;}
+  .brand-symbol{display:grid;flex-shrink:0;}
+  .brand-symbol img{grid-area:1/1;}
+  .white-mark{display:none;}
+  :global([data-theme="dark"]) .black-mark{display:none;}
+  :global([data-theme="dark"]) .white-mark{display:block;}
   .asset-search{display:flex;align-items:center;width:min(360px,55%);border:1px solid var(--rule);border-radius:10px;background:var(--panel);overflow:hidden;}
   input{width:100%;min-width:0;padding:9px 12px;background:transparent;border:0;color:var(--ink);font:inherit;font-size:14px;}
   input::placeholder{color:var(--ink-faint);}

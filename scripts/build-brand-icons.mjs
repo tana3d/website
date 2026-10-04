@@ -8,8 +8,10 @@ const output='public/brand';
 await mkdir(output,{recursive:true});
 for(const size of [16,32,48,64,128,180,192,256,512,1024]){
   await sharp(master).resize(size,size).png().toFile(`${output}/tana-${size}.png`);
+  await sharp('public/brand/tana-light-master.png').resize(size,size).png().toFile(`${output}/tana-light-${size}.png`);
 }
 await sharp(master).resize(64,64).png().toFile('public/favicon.png');
+await sharp('public/brand/tana-light-master.png').resize(64,64).png().toFile('public/favicon-light.png');
 await sharp(master).resize(180,180).png().toFile('public/apple-touch-icon.png');
 
 // ICO permits PNG frames, including the full alpha channel.

@@ -48,7 +48,10 @@ It does not bypass the app's authentication. Never put the token in the repo.
 
 Cloudflare Workers is connected to `tana3d/website`, production branch `main`.
 The current Astro Cloudflare adapter targets Workers rather than Pages.
-Workers Git builds rebuild/deploy on pushes to `main`.
+The production trigger watches pushes to `main`. Its existing saved deployment
+tokens have been revoked or rolled; select a valid token in the Worker's
+Settings → Builds → API token to enable automatic deployment. Direct deployment
+with the authorized local Cloudflare token works.
 
 1. The R2 bucket **tana-assets** and D1 database **tana-library** have been
    provisioned in Sami's Cloudflare account. Binding names are **DB** and **LIBRARY**.
@@ -106,7 +109,9 @@ each tile to its model preview and animate shared tiles across navigation.
 The grid-paper background and saved light/dark preference apply site-wide.
 Header search opens /search, which has filters and excludes the Studio tile;
 the homepage is an unfiltered gallery. navigation and theme controls live in
-the fixed footer copied from zega.dev (persisted across view transitions), with Sami's profile photo and Studio source link.
+the footer copied from zega.dev (persisted across view transitions), with Sami's
+profile photo and Studio source link. It reaches the bottom of the viewport on
+short pages and scrolls after the content on longer pages.
 
 ## Brand assets
 
@@ -117,12 +122,16 @@ favicon. `public/brand/tana-master.png` is the transparent source; PNG sizes
 Use `tana-512.png` for GitHub and other square profile images. The original
 yellow concept is retained separately. `node scripts/build-brand-icons.mjs`
 rebuilds derivatives; ICNS export requires macOS.
+The `tana-light-*` companion has a pearl-white front and identical flag-colour
+sides. The header and favicon switch to it in dark mode.
 
 The mark was generated with the built-in image generation tool. The original
 prompt requested a centered, transparent, bold black 3D T with a slight tilt
 and yellow side shading. The approved edit preserved that shape and replaced
 the sides with equal green, yellow, and red bands along the depth, following
 the entire T perimeter, with no flag emblem or additional text.
+The companion edit changes only the front face to pearl white with light-gray
+shading, keeping the approved shape, angle, colour bands, and transparency.
 
 ## Desktop downloads
 

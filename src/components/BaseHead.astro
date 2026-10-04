@@ -18,7 +18,7 @@ const { title, description, image = '/social.svg' } = Astro.props;
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+<link id="tana-favicon" rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <meta name="generator" content={Astro.generator} />
@@ -57,5 +57,6 @@ const { title, description, image = '/social.svg' } = Astro.props;
     let theme='light';
     try { theme=localStorage.getItem('tana-theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); } catch {}
     document.documentElement.dataset.theme=theme;
+    document.querySelector('#tana-favicon')?.setAttribute('href',theme==='dark'?'/favicon-light.png':'/favicon.png');
   })();
 </script>

@@ -245,6 +245,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 
 *,*::before,*::after{box-sizing:border-box;}
 
-body{padding-bottom:110px;}
-@media(max-width:760px){body{padding-bottom:185px;}}
-@media(max-width:380px){body{padding-bottom:205px;}}
+/* Short pages reach the viewport bottom; long pages scroll the footer naturally. */
+body{display:flex;flex-direction:column;min-height:100dvh;}
+body > header,body > main,body > div{flex-shrink:0;}
