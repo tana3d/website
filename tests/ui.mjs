@@ -81,7 +81,7 @@ try {
   await page.getByLabel('Publish in the public library').uncheck();await page.getByRole('button',{name:'Save asset',exact:true}).click();
   await expect(page.getByRole('status')).toHaveText('Saved as a draft.',{timeout:30000});
   await page.emulateMedia({reducedMotion:'no-preference'});
-  await page.goto(base+'/download');await expect(page.getByRole('heading',{name:'Your world. Your story.'})).toBeVisible();
+  await page.goto(base+'/download');await expect(page.getByRole('heading',{name:'Your world. Your story. Make it real.'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Desktop download coming soon'})).toBeDisabled();
   assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundSize),'28px 28px, 28px 28px');
   await page.getByRole('button',{name:'Switch to dark mode'}).click();
