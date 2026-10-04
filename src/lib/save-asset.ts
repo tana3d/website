@@ -1,5 +1,6 @@
-import { metadata, inspectModel, inspectImage, BODY_LIMIT } from './validation.ts';
-import { fromRow, type AssetRow, type Bindings } from './types.ts';
+import { metadata, inspectImage, BODY_LIMIT } from './validation.ts';
+import { inspectHostedModel } from './source-package.ts';
+import { fromRow, modelFormat, type AssetRow, type Bindings } from './types.ts';
 
 const file = (form: FormData,name: string) => { const f=form.get(name); return f instanceof File && f.size ? f : null; };
 export async function saveAsset(request: Request, env: Bindings, existingId?: string) {
@@ -18,27 +19,33 @@ export async function saveAssetForm(form:FormData,env:Bindings,existingId?:strin
   const newKeys: string[] = [];
   let committed = false;
   try {
-    const meta=metadata(form);
     const existing=existingId ? await env.DB.prepare('SELECT * FROM assets WHERE id=?').bind(existingId).first<AssetRow>() : null;
     if (existingId && !existing) return Response.json({error:'Asset not found.'},{status:404});
+    const meta=metadata(form);
+    // The simplified form omits the credits box. Keep existing custom credits
+    // when the citation details have not changed, including modification notes.
+    if (existing && !form.has('attribution') && ['name','creator','source_url','license','license_url'].every(key => meta[key as keyof typeof meta] === existing[key as keyof AssetRow])) {
+      meta.attribution=existing.attribution;
+    }
     const duplicate=await env.DB.prepare('SELECT id FROM assets WHERE slug=? AND id!=?').bind(meta.slug,existingId ?? '').first();
     if (duplicate) return Response.json({error:'That URL slug is already in use.'},{status:409});
     const model=file(form,'model'), preview=file(form,'preview'), poster=file(form,'poster');
-    if (!existing && (!model || !preview)) throw new Error('Choose a GLB model and a thumbnail or GIF.');
-    const modelInfo=model ? await inspectModel(model) : null;
-    if (meta.category === 'characters' && meta.published && !(modelInfo?.animations ?? JSON.parse(existing?.animations ?? '[]')).length) throw new Error('Published characters need at least one animation. Save as a draft until animations are added.');
+    if (!existing && (!model || !preview)) throw new Error('Choose a model or Blender ZIP and a thumbnail or GIF.');
+    const modelInfo=model ? await inspectHostedModel(model) : null;
+    const format=modelInfo?.format??modelFormat(existing!.model_key);
+    if (format==='glb' && meta.category === 'characters' && meta.published && !(modelInfo?.animations ?? JSON.parse(existing?.animations ?? '[]')).length) throw new Error('Published characters need at least one animation. Save as a draft until animations are added.');
     const previewInfo=preview ? await inspectImage(preview) : null;
     const posterInfo=poster ? await inspectImage(poster,true) : null;
     if (previewInfo?.animated && !posterInfo && (!existing || existing.poster_key === existing.preview_key)) throw new Error('Add a still thumbnail alongside an animated preview.');
     const id=existingId ?? assignedId ?? crypto.randomUUID();
     const revision=crypto.randomUUID();
-    async function put(name: string, data: ArrayBuffer, mime: string) {
+    async function put(name: string, data: ArrayBuffer | ReadableStream, mime: string) {
       const key=`assets/${id}/${revision}/${name}`;
       newKeys.push(key);
-      await env.LIBRARY.put(key,data,{httpMetadata:{contentType:mime}});
+      await env.LIBRARY.put(key,data as Parameters<Bindings['LIBRARY']['put']>[1],{httpMetadata:{contentType:mime}});
       return key;
     }
-    const model_key=modelInfo ? await put('model.glb',modelInfo.buffer,'model/gltf-binary') : existing!.model_key;
+    const model_key=modelInfo ? await put(modelInfo.format==='glb'?'model.glb':`source.${modelInfo.format}`,modelInfo.buffer??model!.stream(),modelInfo.mime) : existing!.model_key;
     const preview_key=previewInfo ? await put(`preview.${previewInfo.kind}`,previewInfo.buffer,previewInfo.mime) : existing!.preview_key;
     const poster_key=posterInfo ? await put(`poster.${posterInfo.kind}`,posterInfo.buffer,posterInfo.mime) : previewInfo && !previewInfo.animated ? preview_key : existing!.poster_key;
     const row={...meta,id,model_key,model_bytes:model?.size ?? existing!.model_bytes,preview_key,poster_key,

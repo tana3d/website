@@ -2,8 +2,9 @@ export const CATEGORIES = ['props','characters','scenes'] as const;
 export const LICENSES = ['CC0','CC-BY-4.0','CC-BY-SA-4.0','CUSTOM'] as const;
 export const SIZES = ['small','micro','vert','hero'] as const;
 export const MODEL_LIMIT = 32 * 1024 * 1024;
+export const SOURCE_LIMIT = 80 * 1024 * 1024;
 export const IMAGE_LIMIT = 8 * 1024 * 1024;
-export const BODY_LIMIT = MODEL_LIMIT + 2 * IMAGE_LIMIT + 65536;
+export const BODY_LIMIT = SOURCE_LIMIT + 2 * IMAGE_LIMIT + 65536;
 const field = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 function text(value: string, label: string, min: number, max: number) {
   if (value.length < min || value.length > max) throw new Error(`${label} must be ${min}–${max} characters.`);
@@ -29,10 +30,13 @@ export function metadata(form: FormData) {
   if (!/^#[a-f0-9]{6}$/i.test(colour)) throw new Error('Choose a valid tile colour.');
   const license = option(field(form,'license'),LICENSES,'license');
   const creator = text(field(form,'creator'),'Creator',0,200);
-  const attribution = text(field(form,'attribution'),'Attribution',0,2000);
   const source_url = link(field(form,'source_url'),'Source');
   const license_url = link(field(form,'license_url'),'License');
-  if (license !== 'CC0' && (!creator || !license_url || !attribution)) throw new Error('This license requires a creator, license URL and attribution text.');
+  if (license !== 'CC0' && (!creator || !license_url)) throw new Error('This license requires a creator and license URL.');
+  const shortCredit = `“${name}”${creator ? ` by ${creator}` : ''}, licensed under ${license}.`;
+  const fullCredit = `“${name}”${creator ? ` by ${creator}` : ''}${source_url ? ` (${source_url})` : ''}, licensed under ${license}${license_url ? ` (${license_url})` : ''}.`;
+  const automaticCredit = license !== 'CC0' || creator || source_url ? (fullCredit.length <= 2000 ? fullCredit : shortCredit) : '';
+  const attribution = text(field(form,'attribution') || automaticCredit,'Attribution',0,2000);
   const rawCategory=field(form,'category');
   const category=['vehicles','nature','environments'].includes(rawCategory)?'props':rawCategory;
   if(category!==rawCategory && !tags.includes(rawCategory) && tags.length<16)tags.push(rawCategory);

@@ -1,4 +1,4 @@
-import type { Bindings } from './types';
+import { modelFormat,modelMime,type Bindings } from './types.ts';
 
 // Viewer/media requests stay separate. Only this explicit model download counts.
 export async function assetDownload(env: Bindings, id: string, head = false) {
@@ -7,9 +7,10 @@ export async function assetDownload(env: Bindings, id: string, head = false) {
   if (!asset) return missing();
   const object = await env.LIBRARY.get(asset.model_key);
   if (!object || object.size !== asset.model_bytes) return missing();
+  const format=modelFormat(asset.model_key);
   const headers = new Headers({
-    'Content-Type':'model/gltf-binary', 'Content-Length':String(object.size),
-    'Content-Disposition':`attachment; filename="${asset.slug.replace(/[^a-z0-9_-]/gi,'-')}.glb"`,
+    'Content-Type':modelMime(format), 'Content-Length':String(object.size),
+    'Content-Disposition':`attachment; filename="${asset.slug.replace(/[^a-z0-9_-]/gi,'-')}.${format}"`,
     'Cache-Control':'no-store', 'Accept-Ranges':'none', 'X-Content-Type-Options':'nosniff',
     'Access-Control-Allow-Origin':'*', 'Access-Control-Expose-Headers':'X-Download-Count',
   });

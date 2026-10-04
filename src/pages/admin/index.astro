@@ -9,10 +9,10 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
     <div class="admin-columns">
       <aside class="asset-list-panel"><label for="admin-search" class="sr-only">Search your assets</label><input id="admin-search" type="search" placeholder="Search assets…" /><div id="admin-list" aria-label="Your assets"></div><div class="list-pagination"><button id="previous" type="button">← Previous</button><span id="page-count"></span><button id="next" type="button">Next →</button></div></aside>
       <form id="asset-form" class="asset-form">
-        <div class="form-top"><h2 id="form-title">New asset</h2><span id="model-info">GLB · 32 MB / source package · 80 MB</span></div>
-        <div class="source-import"><label for="source-link">Start with a source link<input id="source-link" type="url" placeholder="Paste a Sketchfab, Kenney, Quaternius or Poly Haven asset link" /></label><button id="read-source" type="button">Fill in details</button><p id="source-status" aria-live="polite">Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your model or ZIP and preview.</p></div>
+        <div class="form-top"><h2 id="form-title">New asset</h2><span id="model-info">GLB · 32 MB / Blender ZIP · 80 MB</span></div>
+        <div class="source-import"><label for="source-link">Start with a source link<input id="source-link" type="url" placeholder="Paste a Sketchfab, Kenney, Quaternius or Poly Haven asset link" /></label><button id="read-source" type="button">Fill in details</button><p id="source-status" aria-live="polite">Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your model or Blender ZIP and preview.</p></div>
         <div class="upload-grid">
-          <label class="upload-field">3D model or asset ZIP<input type="file" name="model" accept=".glb,.blend,.zip,.fbx,.obj,.gltf,.stl,.ply,.usd,.usda,.usdc,.usdz" /><small>Upload a GLB, or convert a source model up to 80 MB. Include textures in its ZIP. Rig and animations are detected automatically.</small></label>
+          <label class="upload-field">3D model or Blender ZIP<input type="file" name="model" accept=".glb,.blend,.zip" /><small>Upload a GLB, packed Blender file or ZIP with one .blend and its textures. Blender sources are converted locally when added in Studio.</small></label>
           <label class="upload-field">Thumbnail or GIF<input type="file" name="preview" accept=".png,.jpg,.jpeg,.webp,.gif" /><small>Shown in the grid. Up to 8 MB.</small><img id="preview-image" alt="Current asset preview" hidden /></label>
           <label class="upload-field">Still thumbnail<input type="file" name="poster" accept=".png,.jpg,.jpeg,.webp" /><small>Required alongside a GIF; used when visitors prefer reduced motion.</small></label>
         </div>
@@ -20,12 +20,11 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
         <label>Description<textarea name="description" rows="4" maxlength="4000" required placeholder="What is it, and where would you use it?"></textarea></label>
         <label>Tags<input name="tags" placeholder="furniture, wood, interior" /><small>Separate tags with commas.</small></label>
         <div class="fields-three"><label>Category<select name="category">{CATEGORIES.map(c=><option value={c}>{categoryName(c)}</option>)}</select></label><label>Grid size<select name="tile_size">{SIZES.map(s=><option>{s}</option>)}</select></label><label>Tile background<input name="colour" type="color" value="#d9e4de" /></label></div>
-        <fieldset><legend>License & credits</legend><div class="fields-two"><label>License<select name="license">{LICENSES.map(l=><option>{l}</option>)}</select></label><label>Creator<input name="creator" maxlength="200" /></label></div><div class="fields-two"><label>Source URL<input name="source_url" type="url" placeholder="https://…" /></label><label>License URL<input name="license_url" type="url" placeholder="https://creativecommons.org/…" /></label></div><label>Attribution<textarea name="attribution" rows="2" maxlength="2000" placeholder="Credits and any modifications made to the original asset."></textarea></label></fieldset>
-        <div class="save-row"><label class="check-label"><input type="checkbox" name="published" value="1" />Publish in the public library</label><button type="submit" class="primary" id="save-asset">Save asset</button></div>
-        <progress id="upload-progress" aria-label="Asset upload and conversion progress" max="100" value="0" hidden></progress>
+        <fieldset><legend>License & credits</legend><div class="fields-two"><label>License<select name="license">{LICENSES.map(l=><option>{l}</option>)}</select></label><label>Creator<input name="creator" maxlength="200" /></label></div><div class="fields-two"><label>Source URL<input name="source_url" type="url" placeholder="https://…" /></label><label>License URL<input name="license_url" type="url" placeholder="https://creativecommons.org/…" /></label></div></fieldset>
+        <div class="save-row"><label class="check-label"><input type="checkbox" name="published" value="1" checked />Publish in the public library</label><button type="submit" class="primary" id="save-asset">Save asset</button></div>
+        <progress id="upload-progress" aria-label="Asset upload progress" max="100" value="0" hidden></progress>
         <p id="save-status" role="status" aria-live="polite" data-state=""></p>
         <a id="view-asset" hidden>View asset ↗</a>
-        <section id="conversion-jobs" aria-label="Recent model conversions" hidden><h3>Model conversions</h3><div id="conversion-list"></div></section>
       </form>
     </div>
   </section>
@@ -44,36 +43,15 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   const sourceStatus=document.querySelector<HTMLElement>('#source-status')!;
   let sourceRevision=0;
   let id='', page=1, pages=1, slugTouched=false, busy=false, previewUrl='';
-  type Job={id:string;name:string;state:string;asset_id:string|null;error:string;warnings:string[];elapsed_ms:number|null};
-  const delay=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
-  const stage=(job:Job)=>({queued:'Waiting to convert…',converting:'Converting model and textures…',saving:'Validating and saving…',ready:'Ready',failed:'Conversion failed'}[job.state]??job.state);
-  async function loadJobs(){
-    try{
-      const response=await fetch('/api/admin/imports',{cache:'no-store'});if(!response.ok)return;
-      const {jobs}=await response.json() as {jobs:Job[]};const section=document.querySelector<HTMLElement>('#conversion-jobs')!,list=document.querySelector('#conversion-list')!;
-      section.hidden=!jobs.length;list.replaceChildren();
-      for(const job of jobs){const row=document.createElement('div');row.className='conversion-row';const title=document.createElement('strong'),text=document.createElement('p');title.textContent=job.name;text.textContent=stage(job)+(job.state==='failed'?': '+job.error:job.state==='ready'&&job.elapsed_ms?' · '+Math.round(job.elapsed_ms/1000)+' seconds':'');row.append(title,text);if(!['ready','failed'].includes(job.state)){const bar=document.createElement('progress');bar.setAttribute('aria-label',job.name+' conversion');row.append(bar);}else if(job.warnings.length){const warning=document.createElement('p');warning.textContent=job.warnings.join(' ');row.append(warning);}list.append(row);}
-    }catch{/* Keep the form and selected files if a background refresh fails. */}
-  }
-  async function waitForImport(job:Job){
-    while(!['ready','failed'].includes(job.state)){
-      progress.removeAttribute('value');status.dataset.state='pending';status.textContent=stage(job);void loadJobs();
-      await delay(1500);const response=await fetch('/api/admin/imports/'+job.id,{cache:'no-store'});
-      if(!response.ok)throw new Error('Progress could not be refreshed. Your upload is retained; its status appears under Model conversions.');
-      job=(await response.json()).job;
-    }
-    void loadJobs();if(job.state==='failed')throw new Error(job.error||'Conversion failed.');
-    return {id:job.asset_id!,warnings:job.warnings};
-  }
   const control=(name:string)=>form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-  function reset() { if(busy)return; form.reset();sourceRevision++;readSource.disabled=false;sourceStatus.textContent='Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your model or ZIP and preview.'; id=''; slugTouched=false; preview.hidden=true; status.textContent='';status.dataset.state=''; document.querySelector('#form-title')!.textContent='New asset'; document.querySelector('#model-info')!.textContent='GLB · 32 MB / source package · 80 MB'; document.querySelector<HTMLAnchorElement>('#view-asset')!.hidden=true; control('model').required=true;control('preview').required=true; }
+  function reset() { if(busy)return; form.reset();sourceRevision++;readSource.disabled=false;sourceStatus.textContent='Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your model or Blender ZIP and preview.'; id=''; slugTouched=false; preview.hidden=true; status.textContent='';status.dataset.state=''; document.querySelector('#form-title')!.textContent='New asset'; document.querySelector('#model-info')!.textContent='GLB · 32 MB / Blender ZIP · 80 MB'; document.querySelector<HTMLAnchorElement>('#view-asset')!.hidden=true; control('model').required=true;control('preview').required=true; }
   function edit(asset:Asset) {
     if(busy)return;reset();id=asset.id;slugTouched=true;
-    for(const name of ['name','slug','description','category','tile_size','colour','license','creator','source_url','license_url','attribution']) control(name).value=String(asset[name as keyof Asset]);
+    for(const name of ['name','slug','description','category','tile_size','colour','license','creator','source_url','license_url']) control(name).value=String(asset[name as keyof Asset]);
     control('tags').value=asset.tags.join(', ');(control('published') as HTMLInputElement).checked=!!asset.published;
     control('model').required=false;control('preview').required=false;preview.src=mediaUrl(asset.preview_key);preview.hidden=false;
     document.querySelector('#form-title')!.textContent=asset.name;
-    document.querySelector('#model-info')!.textContent=`${fileSize(asset.model_bytes)} · ${asset.rigged?'rigged':'no skeleton'} · ${asset.animations.length} animations${asset.animations.length?' / '+asset.animations.join(', '):''}`;
+    document.querySelector('#model-info')!.textContent=asset.model_format==='glb'?`${fileSize(asset.model_bytes)} · ${asset.rigged?'rigged':'no skeleton'} · ${asset.animations.length} animations${asset.animations.length?' / '+asset.animations.join(', '):''}`:`${fileSize(asset.model_bytes)} · ${asset.model_format.toUpperCase()} · converts when added in Studio`;
     const view=document.querySelector<HTMLAnchorElement>('#view-asset')!;view.hidden=!asset.published;view.href=(location.hostname==='admin.tana.gg'?'https://tana.gg':'')+'/assets/'+asset.slug;
   }
   let loadRevision=0;
@@ -103,7 +81,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
       const data=await response.json();if(revision!==sourceRevision)return;
       if(!response.ok)throw new Error(data.error || 'The source could not be read.');
       const source=data.source;
-      for(const name of ['name','slug','description','category','license','creator','source_url','license_url','attribution'])control(name).value=source[name];
+      for(const name of ['name','slug','description','category','license','creator','source_url','license_url'])control(name).value=source[name];
       control('tags').value=source.tags.join(', ');slugTouched=true;
       sourceStatus.textContent=`Details filled from ${source.provider}. Review them, then upload your model and preview.${source.warnings.length?' '+source.warnings.join(' '):''}`;
     }catch(error){if(revision===sourceRevision)sourceStatus.textContent=error instanceof Error?error.message:String(error);}
@@ -120,39 +98,30 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   control('preview').addEventListener('change',()=>{const file=(control('preview') as HTMLInputElement).files?.[0];if(file){if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(file);preview.src=previewUrl;preview.hidden=false;}});
   form.addEventListener('submit',event=>{
     event.preventDefault();if(busy || readSource.disabled)return;
-    if(control('license').value!=='CC0' && !control('attribution').value.trim() && control('creator').value.trim() && control('source_url').value && control('license_url').value)control('attribution').value=`“${control('name').value}” by ${control('creator').value} (${control('source_url').value}), licensed under ${control('license').value} (${control('license_url').value}).`;
     busy=true;save.disabled=true;status.dataset.state='pending';status.textContent='Uploading…';progress.hidden=false;progress.value=0;
     const data=new FormData(form);data.set('published',(control('published') as HTMLInputElement).checked?'1':'0');
     const xhr=new XMLHttpRequest();xhr.open(id?'PUT':'POST','/api/admin/assets'+(id?'/'+id:''));xhr.responseType='json';
     xhr.upload.onprogress=event=>{if(event.lengthComputable)progress.value=100*event.loaded/event.total;};
     const done=()=>{busy=false;save.disabled=false;progress.hidden=true;};
     xhr.onload=async()=>{
-      if(xhr.status<200||xhr.status>=300 || (!xhr.response?.asset?.id&&!xhr.response?.job?.id)){done();status.dataset.state='error';status.textContent='Not saved: '+(xhr.response?.error??'The upload could not be saved. Please try again.');return;}
-      let assetId=xhr.response.asset?.id as string|undefined;
+      if(xhr.status<200||xhr.status>=300 || !xhr.response?.asset?.id){done();status.dataset.state='error';status.textContent='Not saved: '+(xhr.response?.error??'The upload could not be saved. Please try again.');return;}
+      const assetId=xhr.response.asset.id as string;
       try {
-        const conversion=xhr.response.job?await waitForImport(xhr.response.job):null;assetId=conversion?.id??assetId;
         const response=await fetch('/api/admin/assets/'+encodeURIComponent(assetId!),{cache:'no-store'});
         const result=await response.json();if(!response.ok || result.asset?.id!==assetId)throw new Error('Could not verify the saved record.');
-        const asset=result.asset as Asset;done();edit(asset);search.value=asset.name;page=1;status.dataset.state='success';status.textContent=(asset.published?'Published. Your asset is now in the library.':'Saved as a draft.')+(conversion?.warnings.length?' '+conversion.warnings.join(' '):'');void load();
-      }catch(error){done();if(assetId)id=assetId;status.dataset.state='error';status.textContent=error instanceof Error?error.message:'The saved record could not be verified. Check Model conversions before trying again.';}
+        const asset=result.asset as Asset;done();edit(asset);search.value=asset.name;page=1;status.dataset.state='success';status.textContent=(asset.published?'Published. Your asset is now in the library.':'Saved as a draft.');void load();
+      }catch(error){done();if(assetId)id=assetId;status.dataset.state='error';status.textContent=error instanceof Error?error.message:'The saved record could not be verified. Please check your assets before trying again.';}
     };
     xhr.onerror=()=>{done();status.dataset.state='error';status.textContent='Save not confirmed: connection interrupted. Your selected files are still here. Please try again.';};xhr.send(data);
   });
-  reset();void load();void loadJobs();const jobsTimer=setInterval(()=>{if(document.visibilityState==='visible')void loadJobs();},5000);window.addEventListener('pagehide',()=>clearInterval(jobsTimer),{once:true});
+  reset();void load();
 </script>
 <style is:global>
-  #conversion-jobs { margin-top:24px; padding-top:16px; border-top:1px solid var(--rule); }
-  .conversion-row { margin:12px 0; padding:10px; border-radius:8px; background:var(--rule-soft); }
-  .conversion-row p { margin:5px 0; font-size:13px; }
-  .conversion-row progress,#upload-progress { width:100%; height:6px; accent-color:var(--ink); }
+  #upload-progress { width:100%; height:6px; accent-color:var(--ink); }
   progress { appearance:none; border:0; border-radius:6px; background:var(--rule); overflow:hidden; }
   progress::-webkit-progress-bar { background:var(--rule); border-radius:6px; }
   progress::-webkit-progress-value { background:var(--ink); border-radius:6px; }
   progress::-moz-progress-bar { background:var(--ink); }
-  progress:indeterminate { background:linear-gradient(90deg,transparent,var(--ink),transparent) 0 0 / 40% 100% no-repeat,var(--rule); animation:conversion-progress 1.4s ease-in-out infinite alternate; }
-  progress:indeterminate::-webkit-progress-bar,progress:indeterminate::-webkit-progress-value { background:transparent; }
-  @keyframes conversion-progress { to { background-position:100% 0; } }
-  @media(prefers-reduced-motion:reduce) { progress:indeterminate { animation:none; background-position:50% 0; } }
   .admin-shell { max-width:1320px; margin:24px auto; padding:0 24px; font-family:'Atkinson',sans-serif; font-size:15px; }
   .admin-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:28px; }
   .admin-actions { display:flex; gap:10px; align-items:center; }

@@ -5,13 +5,14 @@ import { assetBySlug } from '../../lib/library';
 import { categoryName, mediaUrl, fileSize, type Bindings } from '../../lib/types';
 const asset=await assetBySlug(env as unknown as Bindings,Astro.params.slug!);
 if (!asset) return Astro.redirect('/404');
+const source=asset.model_format!=='glb';
 ---
 <Layout title={`${asset.name} — tana`} description={asset.description}>
   <section class="asset-detail">
     <a href="/" class="back">← Back to the library</a>
     <div class="detail-columns">
-      <div class="model-stage" transition:name={`asset-${asset.id}`} style={{background:asset.colour}}><model-viewer src={mediaUrl(asset.model_key)} poster={mediaUrl(asset.poster_key)} alt={asset.name} camera-controls auto-rotate shadow-intensity="1" environment-image="neutral" autoplay={asset.animations.length ? true : undefined} loading="eager"></model-viewer><span class="stage-hint">drag to orbit · scroll to zoom</span></div>
-      <div class="detail-copy"><p class="eyebrow">{categoryName(asset.category)} / {asset.license}</p><h1>{asset.name}</h1><p>{asset.description}</p><a class="download-model" href={`/api/assets/${asset.id}/download`} data-astro-reload download={`${asset.slug}.glb`}>Download GLB <span>↓</span></a><p class="file-meta">{asset.downloads.toLocaleString()} downloads · {fileSize(asset.model_bytes)} · {asset.rigged ? 'rigged' : 'no skeleton'} · {asset.animations.length} animations</p>
+      <div class="model-stage" transition:name={`asset-${asset.id}`} style={{background:asset.colour}}>{source ? <img class="source-preview" src={mediaUrl(asset.poster_key || asset.preview_key)} alt={asset.name} /> : <model-viewer src={mediaUrl(asset.model_key)} poster={mediaUrl(asset.poster_key)} alt={asset.name} camera-controls auto-rotate shadow-intensity="1" environment-image="neutral" autoplay={asset.animations.length ? true : undefined} loading="eager"></model-viewer>}<span class="stage-hint">{source ? 'Converts locally when added in Studio' : 'drag to orbit · scroll to zoom'}</span></div>
+      <div class="detail-copy"><p class="eyebrow">{categoryName(asset.category)} / {asset.license}</p><h1>{asset.name}</h1><p>{asset.description}</p><a class="download-model" href={`/api/assets/${asset.id}/download`} data-astro-reload download={`${asset.slug}.${asset.model_format}`}>Download {asset.model_format.toUpperCase()} <span>↓</span></a><p class="file-meta">{asset.downloads.toLocaleString()} downloads · {fileSize(asset.model_bytes)} · {source ? 'Animations detected in Studio' : `${asset.rigged ? 'rigged' : 'no skeleton'} · ${asset.animations.length} animations`}</p>
       {asset.animations.length > 0 && <div class="animation-picker"><label for="animation-name">Animation</label><select id="animation-name"><option value="">Default</option>{asset.animations.map(name=><option>{name}</option>)}</select></div>}
       <div class="tags">{asset.tags.map(tag=><a href={`/search?tag=${encodeURIComponent(tag)}`}>{tag}</a>)}</div>
       <section class="credits"><h2>Credits</h2><p>{asset.creator || 'Creator not specified'}</p>{asset.source_url && <a href={asset.source_url} target="_blank" rel="noopener noreferrer">Original source ↗</a>}<p>{asset.attribution}</p><a href={asset.license_url || 'https://creativecommons.org/publicdomain/zero/1.0/'} target="_blank" rel="noopener noreferrer">{asset.license} license ↗</a></section></div>
@@ -38,10 +39,11 @@ if (!asset) return Astro.redirect('/404');
   .asset-detail { width:94%; max-width:1400px; margin:24px auto; } .back { font-size:14px; color:var(--ink-soft); text-decoration:none; }
   .detail-columns { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:40px; margin-top:24px; }
   .model-stage { border-radius:18px; overflow:hidden; position:relative; min-height:580px; } model-viewer { width:100%; height:580px; } .stage-hint { position:absolute; bottom:20px; left:20px; pointer-events:none; color:#263b35; font-size:12px; opacity:.6; }
+  .source-preview { width:100%;height:580px;object-fit:contain; }
   .detail-copy { padding:30px 0; font-family:'Atkinson',sans-serif; font-size:17px; } h1 { font-size:48px; letter-spacing:-1px; } .eyebrow,.file-meta { font-family:'Inconsolata',monospace; font-size:13px; color:var(--ink-soft); }
   .download-model { display:flex; justify-content:space-between; padding:12px 18px; background:#263b35; color:#f1f5e9; border-radius:10px; text-decoration:none; } .file-meta { margin:10px 0 24px; }
   .tags { display:flex; gap:8px; flex-wrap:wrap; } .tags a { font-size:12px; padding:3px 10px; border-radius:20px; background:#e4ebe7; text-decoration:none; color:#263b35; }
   .credits { margin-top:32px; border-top:1px solid var(--rule); padding-top:24px; font-size:14px; } .credits h2 { font-size:18px; } .credits p { margin:6px 0; white-space:pre-wrap; } .credits a { color:var(--red); }
   .animation-picker { display:flex; align-items:center; gap:14px; margin-bottom:20px; font-size:14px; } select { font:inherit; max-width:250px; padding:8px; border-radius:8px; border:1px solid var(--rule);background:var(--panel);color:var(--ink); }
-  @media(max-width:800px) { .detail-columns { grid-template-columns:1fr; gap:0; } .model-stage { min-height:360px; } model-viewer { height:360px; } h1 { font-size:36px; } }
+  @media(max-width:800px) { .detail-columns { grid-template-columns:1fr; gap:0; } .model-stage { min-height:360px; } model-viewer,.source-preview { height:360px; } h1 { font-size:36px; } }
 </style>

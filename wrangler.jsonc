@@ -1,10 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tana-website",
-  "main": "./src/worker.ts",
-  "durable_objects": { "bindings": [ { "name": "IMPORT_JOBS", "class_name": "ImportJob" }, { "name": "CONVERTER", "class_name": "BlenderConverter" } ] },
-  "migrations": [ { "tag": "model-import-v1", "new_sqlite_classes": ["ImportJob", "BlenderConverter"] } ],
-  "containers": [ { "class_name": "BlenderConverter", "image": "./converter/Dockerfile", "instance_type": "standard-2", "max_instances": 1 } ],
+  "migrations": [
+    { "tag": "model-import-v1", "new_sqlite_classes": ["ImportJob", "BlenderConverter"] },
+    { "tag": "remove-cloud-conversion-v2", "deleted_classes": ["ImportJob", "BlenderConverter"] }
+  ],
   "compatibility_date": "2026-10-04",
   "compatibility_flags": [
     "nodejs_compat"
