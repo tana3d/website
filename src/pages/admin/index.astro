@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Page.astro';
+import { categoryName } from '../../lib/types';
 import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
 ---
 <Layout title="Library admin — tana">
@@ -17,7 +18,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
         <div class="fields-two"><label>Name<input name="name" maxlength="120" required placeholder="Wooden chair" /></label><label>URL slug<input name="slug" maxlength="80" pattern="[a-z0-9][a-z0-9-]*" placeholder="wooden-chair" required /></label></div>
         <label>Description<textarea name="description" rows="4" maxlength="4000" required placeholder="What is it, and where would you use it?"></textarea></label>
         <label>Tags<input name="tags" placeholder="furniture, wood, interior" /><small>Separate tags with commas.</small></label>
-        <div class="fields-three"><label>Category<select name="category">{CATEGORIES.map(c=><option>{c}</option>)}</select></label><label>Grid size<select name="tile_size">{SIZES.map(s=><option>{s}</option>)}</select></label><label>Tile background<input name="colour" type="color" value="#d9e4de" /></label></div>
+        <div class="fields-three"><label>Category<select name="category">{CATEGORIES.map(c=><option value={c}>{categoryName(c)}</option>)}</select></label><label>Grid size<select name="tile_size">{SIZES.map(s=><option>{s}</option>)}</select></label><label>Tile background<input name="colour" type="color" value="#d9e4de" /></label></div>
         <fieldset><legend>License & credits</legend><div class="fields-two"><label>License<select name="license">{LICENSES.map(l=><option>{l}</option>)}</select></label><label>Creator<input name="creator" maxlength="200" /></label></div><div class="fields-two"><label>Source URL<input name="source_url" type="url" placeholder="https://…" /></label><label>License URL<input name="license_url" type="url" placeholder="https://creativecommons.org/…" /></label></div><label>Attribution<textarea name="attribution" rows="2" maxlength="2000" placeholder="Credits and any modifications made to the original asset."></textarea></label></fieldset>
         <div class="save-row"><label class="check-label"><input type="checkbox" name="published" value="1" />Publish in the public library</label><button type="submit" class="primary" id="save-asset">Save asset</button></div>
         <progress id="upload-progress" max="100" value="0" hidden></progress>

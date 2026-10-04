@@ -1,4 +1,4 @@
-export const CATEGORIES = ['characters','props','environments','vehicles','nature'] as const;
+export const CATEGORIES = ['props','characters','scenes'] as const;
 export const LICENSES = ['CC0','CC-BY-4.0','CC-BY-SA-4.0','CUSTOM'] as const;
 export const SIZES = ['small','micro','vert','hero'] as const;
 export const MODEL_LIMIT = 32 * 1024 * 1024;

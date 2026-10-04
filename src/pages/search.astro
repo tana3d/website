@@ -8,12 +8,14 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 import ProjectList from '../components/ProjectList.astro';
 import { env } from 'cloudflare:workers';
 import { listAssets } from '../lib/library';
+import { CATEGORIES } from '../lib/validation';
+import { categoryName } from '../lib/types';
 import type { Bindings } from '../lib/types';
 import '../styles/global.css'
 let catalog = { assets: [], total: 0, page: 1, pages: 0 } as Awaited<ReturnType<typeof listAssets>>;
 let unavailable = false;
 try { catalog = await listAssets(env as unknown as Bindings, Astro.url.searchParams); } catch { unavailable = true; }
-const categories = ['characters','props','environments','vehicles','nature'];
+const categories = CATEGORIES;
 // Every visit gets a new shuffle, including refreshes through an edge cache.
 Astro.response.headers.set('Cache-Control','no-store');
 ---
@@ -29,7 +31,7 @@ Astro.response.headers.set('Cache-Control','no-store');
 			<form class="library-filter" method="get" role="search">
               <input type="hidden" name="q" value={Astro.url.searchParams.get('q') ?? ''} />
               <label class="sr-only" for="category">Category</label>
-              <select name="category" id="category"><option value="">all models</option>{categories.map(c=><option value={c} selected={Astro.url.searchParams.get('category')===c}>{c}</option>)}</select>
+              <select name="category" id="category"><option value="">all models</option>{categories.map(c=><option value={c} selected={Astro.url.searchParams.get('category')===c}>{categoryName(c)}</option>)}</select>
               <button type="submit">Filter</button>
           </form>
           <ProjectList projects={catalog.assets} showStudio={false} />

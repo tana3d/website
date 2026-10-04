@@ -1,5 +1,5 @@
 ---
-import { mediaUrl, type Asset } from '../lib/types';
+import { mediaUrl, categoryName, type Asset } from '../lib/types';
 interface Props { asset: Asset; }
 const { asset } = Astro.props;
 ---
@@ -8,7 +8,7 @@ const { asset } = Astro.props;
     {asset.preview_animated ? <source media="(prefers-reduced-motion: reduce)" srcset={mediaUrl(asset.poster_key)} /> : null}
     <img src={mediaUrl(asset.preview_key)} alt={asset.name} loading="lazy" decoding="async" width="600" height="600" />
   </picture>
-  <span class="tile-tag">{asset.category}{asset.preview_animated ? ' / animated' : ''}</span>
+  <span class="tile-tag">{categoryName(asset.category)}{asset.preview_animated ? ' / animated' : ''}</span>
   <span class="tile-footer"><span class="tile-name">{asset.name}</span><span class="tile-downloads" aria-label={`${asset.downloads.toLocaleString()} downloads`}>↓ {asset.downloads.toLocaleString()}</span><span aria-hidden="true">↗</span></span>
 </a>
 <style>

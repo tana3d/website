@@ -19,6 +19,7 @@ export async function saveAsset(request: Request, env: Bindings, existingId?: st
     const model=file(form,'model'), preview=file(form,'preview'), poster=file(form,'poster');
     if (!existing && (!model || !preview)) throw new Error('Choose a GLB model and a thumbnail or GIF.');
     const modelInfo=model ? await inspectModel(model) : null;
+    if (meta.category === 'characters' && meta.published && !(modelInfo?.animations ?? JSON.parse(existing?.animations ?? '[]')).length) throw new Error('Published characters need at least one animation. Save as a draft until animations are added.');
     const previewInfo=preview ? await inspectImage(preview) : null;
     const posterInfo=poster ? await inspectImage(poster,true) : null;
     if (previewInfo?.animated && !posterInfo && (!existing || existing.poster_key === existing.preview_key)) throw new Error('Add a still thumbnail alongside an animated preview.');

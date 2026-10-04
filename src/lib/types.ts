@@ -16,3 +16,5 @@ export type AssetRow = Omit<Asset, 'tags' | 'animations'> & { tags: string; anim
 export const fromRow = (row: AssetRow): Asset => ({ ...row, downloads:row.downloads ?? 0, tags: JSON.parse(row.tags), animations: JSON.parse(row.animations) });
 export const mediaUrl = (key: string) => '/media/' + key.split('/').map(encodeURIComponent).join('/');
 export const fileSize = (bytes: number) => bytes < 1048576 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
+
+export const categoryName = (category: string) => ({props: "Objects", characters: "Characters", scenes: "Scenes"}[category] ?? category);
