@@ -18,6 +18,12 @@ try {
   await page.waitForFunction(()=>[...document.querySelectorAll('.wrapper img')].filter(img=>img.getBoundingClientRect().top<innerHeight).every(img=>img.complete&&img.naturalWidth>0));
   await expect(page.getByText('Make it yours. Create with friends.',{exact:false})).toBeVisible();
   assert.equal(await page.locator('.site-header nav').count(),0);
+  assert.equal(await page.locator('.library-filter').count(),0);
+  await expect(page.locator('.feature-caption')).toContainText('Studio is free & open source.');
+  await expect(page.locator('.chatgpt-name')).toContainText('ChatGPT');
+  const margins=await page.locator('.feature-download').evaluate(el=>({top:getComputedStyle(el).marginTop,bottom:getComputedStyle(el).marginBottom}));
+  assert.deepEqual(margins,{top:'30px',bottom:'20px'});
+  assert.equal(await page.locator('.feature-caption').evaluate(el=>getComputedStyle(el).color),'rgb(255, 255, 255)');
   assert.equal(await page.locator('.credit .avatar').getAttribute('src'),'/sami.png');
   await expect(page.locator('.credit-os')).toHaveText(' · studio is open source.');
   assert.equal(await page.locator('.site-footer').evaluate(el=>getComputedStyle(el).position),'fixed');
@@ -34,6 +40,9 @@ try {
   assert.equal(await page.locator('.wrapper > *').first().getAttribute('data-pinned'),'true');
   await page.locator('.site-footer').evaluate(el=>el.dataset.testIdentity='persisted');
   await page.getByLabel('Search models').fill('robot');await page.getByRole('button',{name:'Find',exact:true}).click();
+  await expect(page).toHaveURL(/\/search\?q=robot/);
+  assert.equal(await page.locator('[data-pinned]').count(),0);
+  await expect(page.getByLabel('Category',{exact:true})).toBeVisible();
   await expect(page.locator('.asset-tile')).toHaveCount(1);await page.getByRole('link',{name:'View Expressive robot'}).click();
   await expect(page.getByRole('heading',{name:'Expressive robot',exact:true})).toBeVisible();
   await page.waitForFunction(()=>document.querySelector('model-viewer')?.loaded,{timeout:30000});

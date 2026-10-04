@@ -1,0 +1,9 @@
+---
+import Layout from '../layouts/Page.astro';
+import { env } from 'cloudflare:workers';
+const ready=!!env.GITHUB_CLIENT_ID && !!env.GITHUB_CLIENT_SECRET && !!env.ADMIN_SESSION_SECRET;
+---
+<Layout title="Studio library admin — tana">
+  <main class="login-card"><p>tana / library</p><h1>Admin sign-in.</h1><p>Manage the assets in Studio’s library.</p>{ready ? <a href="/api/auth/github" class="login-button" data-astro-reload>Sign in with GitHub ↗</a> : <p role="status">Admin sign-in is being configured.</p>}</main>
+</Layout>
+<style>.login-card{max-width:520px;margin:8vh auto;background:var(--panel);border:1px solid var(--rule);border-radius:18px;padding:36px;font-size:16px;}.login-card h1{font-family:'Atkinson',sans-serif;font-size:36px;}.login-button{display:block;padding:12px 18px;border-radius:8px;background:var(--button);color:var(--button-ink);text-decoration:none;}</style>

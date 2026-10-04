@@ -4,7 +4,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
 ---
 <Layout title="Library admin — tana">
   <section class="admin-shell">
-    <header class="admin-heading"><div><p class="eyebrow">tana / library</p><h1>Manage your assets.</h1><p>Upload a model, give it a preview, and make it part of the library.</p></div><button id="new-asset" type="button" class="primary">+ New asset</button></header>
+    <header class="admin-heading"><div><p class="eyebrow">tana / library</p><h1>Manage your assets.</h1><p>Upload a model, give it a preview, and make it part of the library.</p></div><div class="admin-actions"><button id="new-asset" type="button" class="primary">+ New asset</button>{Astro.url.hostname==='admin.tana.gg' && <form action="/api/auth/logout" method="post" data-astro-reload><button type="submit">Sign out</button></form>}</div></header>
     <div class="admin-columns">
       <aside class="asset-list-panel"><label for="admin-search" class="sr-only">Search your assets</label><input id="admin-search" type="search" placeholder="Search assets…" /><div id="admin-list" aria-label="Your assets"></div><div class="list-pagination"><button id="previous" type="button">← Previous</button><span id="page-count"></span><button id="next" type="button">Next →</button></div></aside>
       <form id="asset-form" class="asset-form">
@@ -46,7 +46,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
     control('model').required=false;control('preview').required=false;preview.src=mediaUrl(asset.preview_key);preview.hidden=false;
     document.querySelector('#form-title')!.textContent=asset.name;
     document.querySelector('#model-info')!.textContent=`${fileSize(asset.model_bytes)} · ${asset.rigged?'rigged':'no skeleton'} · ${asset.animations.length} animations${asset.animations.length?' / '+asset.animations.join(', '):''}`;
-    const view=document.querySelector<HTMLAnchorElement>('#view-asset')!;view.hidden=!asset.published;view.href='/assets/'+asset.slug;
+    const view=document.querySelector<HTMLAnchorElement>('#view-asset')!;view.hidden=!asset.published;view.href=(location.hostname==='admin.tana.gg'?'https://tana.gg':'')+'/assets/'+asset.slug;
   }
   let loadRevision=0;
   async function load() {
@@ -87,6 +87,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
 <style is:global>
   .admin-shell { max-width:1320px; margin:24px auto; padding:0 24px; font-family:'Atkinson',sans-serif; font-size:15px; }
   .admin-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:28px; }
+  .admin-actions { display:flex; gap:10px; align-items:center; }
   .admin-heading h1 { font-size:38px; letter-spacing:-1px; } .admin-heading p { margin:4px 0; color:var(--ink-soft); } .eyebrow { font-family:'Inconsolata',monospace; font-size:13px; }
   .admin-columns { display:grid; grid-template-columns:280px minmax(0,1fr); gap:24px; }
   .asset-list-panel,.asset-form { background:var(--panel); border-radius:18px; padding:22px; }
@@ -108,5 +109,6 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   .list-pagination { display:flex; gap:8px; align-items:center; margin-top:16px; font-size:11px; } .list-pagination button { padding:4px; font-size:11px; }
   progress { width:100%; } #save-status { margin:12px 0 0; min-height:1.5em; }
   @media(max-width:850px) { .admin-columns { grid-template-columns:1fr; } .asset-list-panel { position:static; max-height:300px; } }
-  @media(max-width:520px) { .admin-shell { padding:0 8px; } .admin-heading h1 { font-size:28px; } .upload-grid,.fields-two,.fields-three { grid-template-columns:1fr; gap:0; } .save-row { align-items:flex-start; flex-direction:column; } .asset-form { padding:16px; } }
+  @media(max-width:520px) { .admin-shell { padding:0 8px; } .admin-actions { display:flex; gap:10px; align-items:center; }
+  .admin-heading h1 { font-size:28px; } .upload-grid,.fields-two,.fields-three { grid-template-columns:1fr; gap:0; } .save-row { align-items:flex-start; flex-direction:column; } .asset-form { padding:16px; } }
 </style>

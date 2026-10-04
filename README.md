@@ -20,7 +20,7 @@ npm run db:local
 npm run dev
 ```
 
-Open `http://127.0.0.1:4321` and `/admin`. Astro runs D1 and R2 locally via
+Open `http://127.0.0.1:4321` and `/admin` (local development only). Astro runs D1 and R2 locally via
 Cloudflare's runtime. This is isolated local storage; it never writes to the
 production bucket. The local admin exception requires both a development build
 and a loopback hostname. It is disabled in production builds.
@@ -38,32 +38,48 @@ then publishes them through the actual admin API. Model files are stored in
 local R2; metadata is stored in local D1. No binary model files are checked into
 Git. This script deliberately seeds localhost only.
 
+For initial hosted catalog provisioning, use Node 24+ and
+`npm run seed:cloudflare -- --publish` with CLOUDFLARE_API_TOKEN set in the
+environment. It validates models/previews, uploads to R2, then commits metadata
+to D1 through Cloudflare's API. Existing slugs are skipped to preserve admin edits.
+It does not bypass the app's authentication. Never put the token in the repo.
+
 ## Cloudflare setup
 
-Use **Workers → Import a repository** and connect `tana3d/website`, production
-branch `main`. The current Astro Cloudflare adapter targets Workers rather than
-Pages. Workers Git builds can rebuild/deploy on pushes to `main`.
+Cloudflare Workers is connected to `tana3d/website`, production branch `main`.
+The current Astro Cloudflare adapter targets Workers rather than Pages.
+Workers Git builds rebuild/deploy on pushes to `main`.
 
-1. Create the R2 bucket and D1 database in your account.
-2. Replace the placeholder `database_id`, database name, and bucket name in
-   `wrangler.jsonc`. Keep binding names **DB** and **LIBRARY**.
-3. Apply the D1 migration: `npm run db:remote`.
+1. The R2 bucket **tana-assets** and D1 database **tana-library** have been
+   provisioned in Sami's Cloudflare account. Binding names are **DB** and **LIBRARY**.
+   The initial migration and 12 starter assets have been uploaded remotely.
+2. Account/database IDs and existing tana.gg/www.tana.gg Worker routes are in
+   `wrangler.jsonc`. Other Tana services and mail DNS records are untouched.
+3. Future database changes use `npm run db:remote`.
 4. Set build command `npm run build`, deploy command `npx wrangler deploy`,
    root directory `/`, and Node version `24`.
-5. Create a Cloudflare Access self-hosted application covering both
-   `tana.gg/admin*` and `tana.gg/api/admin*`. Permit only your admin identity.
-   Protect the equivalent paths on the Workers preview hostname too, or disable
-   that hostname. Set `ACCESS_TEAM_DOMAIN` (e.g. `yourteam.cloudflareaccess.com`)
-   and `ACCESS_AUD` (application audience) in Wrangler vars or Worker settings.
-6. Do **not** set `LOCAL_ADMIN` in production. Do not make the R2 bucket public;
-   published files are streamed through the site and drafts require admin auth.
+5. Register a GitHub OAuth app (owner tana3d) with homepage
+   `https://admin.tana.gg` and callback
+   `https://admin.tana.gg/api/auth/github/callback`. Put `GITHUB_CLIENT_ID`,
+   `GITHUB_CLIENT_SECRET`, and a random 32-byte `ADMIN_SESSION_SECRET` into
+   Worker secrets. No credentials belong in Git.
+6. The only allowed account is **samifouad**, permanent GitHub ID **6378290**
+   (`GITHUB_ADMIN_ID` in Wrangler). Sign-in validates the real GitHub `/user`
+   response, signed state, and PKCE before issuing a 12-hour signed session.
+   The cookie is Secure, HttpOnly, SameSite=Lax, and restricted to admin.tana.gg.
+   GitHub tokens are used for identity lookup and are not stored. No repository
+   permissions are requested.
 
-The backend independently verifies Access JWT signature, expiry, issuer, and
-audience, so forgetting an Access routing rule does not expose admin routes.
-Writes also require a same-origin request. No credentials are stored in Git.
-Deployment has not been performed; it requires your real bindings and Access
-configuration. The initial production library will be empty until you upload
-assets to its R2 bucket through `/admin`.
+The public site is deployed at https://tana.gg with 12 starter assets. The admin
+area is **only** at https://admin.tana.gg and is not linked from the public site.
+Public-host `/admin`, `/api/admin`, `/login`, and OAuth routes return 404.
+Unauthenticated admin API requests return 401, while the admin UI opens the
+GitHub sign-in page. OAuth credentials and the session secret are configured
+as Worker secrets. Cloudflare Access is not used.
+Workers.dev and preview URLs are disabled. Existing Tana services and mail DNS
+are preserved; website routes intercept only tana.gg, www.tana.gg, and admin.tana.gg.
+Writes require a same-origin request, and unpublished media requires an owner
+session. The R2 bucket remains private.
 
 ## Library management
 
@@ -88,8 +104,25 @@ the original site's shuffle on each visit. Its sticky behavior is disabled on
 small screens to avoid obscuring the gallery. Astro view transitions match
 each tile to its model preview and animate shared tiles across navigation.
 The grid-paper background and saved light/dark preference apply site-wide.
-Header search queries the asset library; navigation and theme controls live in
+Header search opens /search, which has filters and excludes the Studio tile;
+the homepage is an unfiltered gallery. navigation and theme controls live in
 the fixed footer copied from zega.dev (persisted across view transitions), with Sami's profile photo and Studio source link.
+
+## Brand assets
+
+The approved Tana mark is a black extruded T, tilted slightly, with green,
+yellow, and red bands wrapping around its sides. It is used in the header and
+favicon. `public/brand/tana-master.png` is the transparent source; PNG sizes
+16–1024, macOS `tana.icns`, and Windows `tana.ico` are ready for app packaging.
+Use `tana-512.png` for GitHub and other square profile images. The original
+yellow concept is retained separately. `node scripts/build-brand-icons.mjs`
+rebuilds derivatives; ICNS export requires macOS.
+
+The mark was generated with the built-in image generation tool. The original
+prompt requested a centered, transparent, bold black 3D T with a slight tilt
+and yellow side shading. The approved edit preserved that shape and replaced
+the sides with equal green, yellow, and red bands along the depth, following
+the entire T perimeter, with no flag emblem or additional text.
 
 ## Desktop downloads
 
@@ -147,3 +180,6 @@ preparation script supplies both. Poly Haven's own preview renders are not
 redistributed. The Studio screenshot includes Cesium Man, © 2017 Cesium,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with display-scale and
 animation-label changes in Studio; Cesium's logo has separate trademark rights.
+
+The Studio card uses the OpenAI blossom icon from Simple Icons v13 beside
+ChatGPT; the icon represents its respective owner.

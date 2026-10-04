@@ -14,7 +14,8 @@
     "seed:local": "node scripts/seed-local.mjs",
     "deploy": "npm run build && wrangler deploy",
     "test:ui": "node tests/ui.mjs",
-    "prepare:assets": "node scripts/prepare-starter-assets.mjs"
+    "prepare:assets": "node scripts/prepare-starter-assets.mjs",
+    "seed:cloudflare": "node scripts/seed-cloudflare.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

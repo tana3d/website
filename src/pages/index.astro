@@ -10,10 +10,11 @@ import { env } from 'cloudflare:workers';
 import { listAssets } from '../lib/library';
 import type { Bindings } from '../lib/types';
 import '../styles/global.css'
+if (Astro.url.hostname==='admin.tana.gg') return Astro.rewrite('/admin');
+if (['q','category','tag'].some(key=>Astro.url.searchParams.has(key))) return Astro.redirect(`/search?${Astro.url.searchParams}`);
 let catalog = { assets: [], total: 0, page: 1, pages: 0 } as Awaited<ReturnType<typeof listAssets>>;
 let unavailable = false;
 try { catalog = await listAssets(env as unknown as Bindings, Astro.url.searchParams); } catch { unavailable = true; }
-const categories = ['characters','props','environments','vehicles','nature'];
 // Every visit gets a new shuffle, including refreshes through an edge cache.
 Astro.response.headers.set('Cache-Control','no-store');
 ---
@@ -26,12 +27,6 @@ Astro.response.headers.set('Cache-Control','no-store');
 	<body class="w-full ">
 		<Header />
 		<div class="p-0 w-screen m-0 max-w-full ">
-			<form class="library-filter" method="get" role="search">
-              <input type="hidden" name="q" value={Astro.url.searchParams.get('q') ?? ''} />
-              <label class="sr-only" for="category">Category</label>
-              <select name="category" id="category"><option value="">all models</option>{categories.map(c=><option value={c} selected={Astro.url.searchParams.get('category')===c}>{c}</option>)}</select>
-              <button type="submit">Filter</button>
-          </form>
           <ProjectList projects={catalog.assets} />
           {unavailable ? <p class="library-message" role="status">The library is temporarily unavailable. Please try again shortly.</p> : !catalog.total ? <p class="library-message">{Astro.url.search ? 'No models matched. Try another search.' : 'The library is getting its first assets. Come back soon.'}</p> : null}
           {catalog.pages > 1 && <nav class="pagination" aria-label="Library pages">{Array.from({length:catalog.pages},(_,i)=>i+1).filter(p=>Math.abs(p-catalog.page)<3||p===1||p===catalog.pages).map(p=>{const params=new URLSearchParams(Astro.url.searchParams);params.set('page',String(p));return <a href={`/?${params}`} aria-current={p===catalog.page ? 'page' : undefined}>{p}</a>;})}</nav>}
@@ -40,10 +35,6 @@ Astro.response.headers.set('Cache-Control','no-store');
 	</body>
 </html>
 <style>
-  .library-filter { width:98%; margin:0 auto 14px; display:flex; gap:8px; }
-  input,select,button { border:1px solid var(--rule); border-radius:10px; background:var(--panel); color:var(--ink); padding:8px 12px; font:inherit; font-size:13px; }
-  input { flex:1; min-width:0; } button { cursor:pointer; } select { max-width:130px; }
   .library-message,.pagination { margin:30px 3%; font-size:15px; }
   .pagination { display:flex; gap:12px; }
-  @media(max-width:480px) { input { padding:8px; } select { max-width:105px; } button { padding:8px; } }
 </style>

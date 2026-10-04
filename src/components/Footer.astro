@@ -1,11 +1,12 @@
 ---
 const today=new Date();
+const publicSite=Astro.url.hostname==='admin.tana.gg'?'https://tana.gg':'';
 ---
 <footer class="site-footer" transition:name="site-footer" transition:persist="site-footer" transition:animate="none">
   <div class="footer-content">
     <span class="credit"><img src="/sami.png" alt="" width="22" height="22" class="avatar" /><span>© {today.getFullYear()} <a href="https://samifou.ad">Sami Fouad</a><span class="credit-os"> · studio is <a href="https://github.com/tana3d/studio">open source</a>.</span></span></span>
     <div class="footer-links">
-      <nav class="footer-nav-links" aria-label="Footer"><a href="/">library</a><a href="/download">download</a><a href="/blog">blog</a></nav>
+      <nav class="footer-nav-links" aria-label="Footer"><a href={publicSite+"/"}>library</a><a href={publicSite+"/download"}>download</a><a href={publicSite+"/blog"}>blog</a></nav>
       <span class="footer-controls"><button class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode"><svg class="moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" /></svg><svg class="sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button></span>
     </div>
   </div>

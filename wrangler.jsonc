@@ -3,9 +3,45 @@
   "name": "tana-website",
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-10-04",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": { "directory": "./dist", "binding": "ASSETS" },
-  "d1_databases": [{ "binding": "DB", "database_name": "tana-library", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
-  "r2_buckets": [{ "binding": "LIBRARY", "bucket_name": "tana-assets" }],
-  "vars": { "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" }
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tana-library",
+      "database_id": "e5d5f70f-caf6-4a3f-8bbf-6de6ba484ed3",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LIBRARY",
+      "bucket_name": "tana-assets"
+    }
+  ],
+  "vars": {
+    "GITHUB_ADMIN_ID": "6378290"
+  },
+  "account_id": "08b93c93f8b7adc43678e9afba31e4ee",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "tana.gg/*",
+      "zone_id": "24f4b58894ff231e78b859104bd20db0"
+    },
+    {
+      "pattern": "www.tana.gg/*",
+      "zone_id": "24f4b58894ff231e78b859104bd20db0"
+    },
+    {
+      "pattern": "admin.tana.gg/*",
+      "zone_id": "24f4b58894ff231e78b859104bd20db0"
+    }
+  ]
 }

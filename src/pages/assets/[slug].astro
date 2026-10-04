@@ -13,7 +13,7 @@ if (!asset) return Astro.redirect('/404');
       <div class="model-stage" transition:name={`asset-${asset.id}`} style={{background:asset.colour}}><model-viewer src={mediaUrl(asset.model_key)} poster={mediaUrl(asset.poster_key)} alt={asset.name} camera-controls auto-rotate shadow-intensity="1" environment-image="neutral" autoplay={asset.animations.length ? true : undefined} loading="eager"></model-viewer><span class="stage-hint">drag to orbit · scroll to zoom</span></div>
       <div class="detail-copy"><p class="eyebrow">{asset.category} / {asset.license}</p><h1>{asset.name}</h1><p>{asset.description}</p><a class="download-model" href={mediaUrl(asset.model_key)} download={`${asset.slug}.glb`}>Download GLB <span>↓</span></a><p class="file-meta">{fileSize(asset.model_bytes)} · {asset.rigged ? 'rigged' : 'no skeleton'} · {asset.animations.length} animations</p>
       {asset.animations.length > 0 && <div class="animation-picker"><label for="animation-name">Animation</label><select id="animation-name"><option value="">Default</option>{asset.animations.map(name=><option>{name}</option>)}</select></div>}
-      <div class="tags">{asset.tags.map(tag=><a href={`/?tag=${encodeURIComponent(tag)}`}>{tag}</a>)}</div>
+      <div class="tags">{asset.tags.map(tag=><a href={`/search?tag=${encodeURIComponent(tag)}`}>{tag}</a>)}</div>
       <section class="credits"><h2>Credits</h2><p>{asset.creator || 'Creator not specified'}</p>{asset.source_url && <a href={asset.source_url} target="_blank" rel="noopener noreferrer">Original source ↗</a>}<p>{asset.attribution}</p><a href={asset.license_url || 'https://creativecommons.org/publicdomain/zero/1.0/'} target="_blank" rel="noopener noreferrer">{asset.license} license ↗</a></section></div>
     </div>
   </section>
