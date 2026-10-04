@@ -4,7 +4,7 @@
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { path, readJson, writeJson, sha256, progress } from './lib/common.mjs';
-import { getIO, normalise, stats } from './lib/gltf.mjs';
+import { getIO, normalise, stats, readModel, usableClips } from './lib/gltf.mjs';
 import { createRenderer } from './lib/render.mjs';
 import { inspectModel, inspectImage } from '../../src/lib/validation.ts';
 const arg = n => { const i = process.argv.indexOf('--' + n); return i > 0 ? Number(process.argv[i + 1]) : undefined; };
@@ -17,11 +17,12 @@ for (const item of slice) {
   try { await stat(resolve(dir, 'built.json')); skipped++; continue; } catch {}
   try {
     await mkdir(dir, { recursive: true });
-    const doc = await io.read(resolve(path('ex'), item.file));
+    const doc = await readModel(resolve(path('ex'), item.file));
     // Keep downloads reasonable: step texture size down until the file is under ~2 MB (min 256 px).
     let glb = await normalise(doc, 1024);
-    for (const size of [512, 256]) if (glb.byteLength > 2 * 1048576) glb = await normalise(await io.readBinary(glb), size);
+    for (const size of [512, 256]) if (glb.byteLength > (doc.getRoot().listAnimations().length > 20 ? 14 : 2) * 1048576) glb = await normalise(await io.readBinary(glb), size);
     const model = await inspectModel(new File([glb], 'model.glb'));
+    if (item.category === 'characters') { const real = usableClips(await io.readBinary(glb)); if (!real.length) throw Error('character has no usable animation clips'); model.animations = real.map(c => c.name); }
     const s = stats(await io.readBinary(glb)); if (!s.verts) throw Error('model has no geometry');
     const r = await renderer.render(glb);
     const still = await inspectImage(new File([r.png], 'poster.png'), true);

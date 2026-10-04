@@ -11,13 +11,13 @@ import * as THREE from 'three';import { GLTFLoader } from '/node_modules/three/e
 const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true});renderer.setSize(512,512);renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;document.body.append(renderer.domElement);
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(32,1,.01,100);scene.add(new THREE.HemisphereLight(0xf6f8ff,0x9b8678,1.5));const light=new THREE.DirectionalLight(0xffffff,2.4);light.position.set(3,5,4);scene.add(light);const fill=new THREE.DirectionalLight(0xd6e8ff,1);fill.position.set(-4,2,-3);scene.add(fill);
 let object,mixer,clip;
-window.loadAsset=async url=>{if(object)scene.remove(object);const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);object=gltf.scene;object.traverse(o=>{o.frustumCulled=false;});scene.add(object);
+window.fitScale=2.5;window.elev=2.6;window.loadAsset=async url=>{if(object)scene.remove(object);const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);object=gltf.scene;object.traverse(o=>{o.frustumCulled=false;});scene.add(object);
  mixer=gltf.animations.length?new THREE.AnimationMixer(object):null;clip=null;
  if(mixer){clip=gltf.animations.find(a=>/idle/i.test(a.name))??gltf.animations.find(a=>/walk|run/i.test(a.name))??gltf.animations[0];mixer.clipAction(clip).play();mixer.setTime(clip.duration*.1);}
  object.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(object),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
- const wrap=new THREE.Group();scene.remove(object);wrap.add(object);object.position.sub(center);const scale=2.5/Math.max(size.x,size.y,size.z,1e-6);wrap.scale.setScalar(scale);scene.add(wrap);object=wrap;
+ const wrap=new THREE.Group();scene.remove(object);wrap.add(object);object.position.sub(center);const scale=window.fitScale/Math.max(size.x,size.y,size.z,1e-6);wrap.scale.setScalar(scale);scene.add(wrap);object=wrap;
  window.renderFrame(0);return {duration:clip?clip.duration:0,animated:!!clip,tris:0};};
-window.renderFrame=(t,angle=.65)=>{if(mixer&&clip)mixer.setTime(Math.min(t,clip.duration*.999));camera.position.set(5*Math.sin(angle),2.6,5*Math.cos(angle));camera.lookAt(0,0,0);renderer.render(scene,camera);};
+window.renderFrame=(t,angle=.65)=>{if(mixer&&clip)mixer.setTime(Math.min(t,clip.duration*.999));camera.position.set(5*Math.sin(angle),window.elev,5*Math.cos(angle));camera.lookAt(0,0,0);renderer.render(scene,camera);};
 </script></body></html>`;
 export async function createRenderer() {
   const models = new Map(); let n = 0;
@@ -36,9 +36,10 @@ export async function createRenderer() {
   await page.waitForFunction(() => window.loadAsset);
   return {
     // Returns { png, gif|null, colour }.
-    async render(glb, { animate = true } = {}) {
+    async render(glb, { animate = true, fit = 2.5, elev = 2.6 } = {}) {
       const key = `/model/${n++}.glb`; models.set(key, glb);
       try {
+        await page.evaluate(({ f, e }) => { window.fitScale = f; window.elev = e; }, { f: fit, e: elev });
         const info = await page.evaluate(u => window.loadAsset(u), key);
         await page.evaluate(() => window.renderFrame(0));
         const png = await sharp(await page.screenshot({ omitBackground: true })).png({ compressionLevel: 9 }).toBuffer();

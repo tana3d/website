@@ -20,7 +20,10 @@ let done = 0;
 const errors = await pool(batch, arg('concurrency', 4), async item => {
   const dir = path('out', item.slug); const b = await readJson(resolve(dir, 'built.json'));
   const form = new FormData();
-  for (const k of ['slug', 'name', 'description', 'category', 'creator', 'source_url', 'license', 'license_url', 'attribution', 'tile_size']) form.set(k, item[k] ?? '');
+  for (const k of ['slug', 'name', 'description', 'creator', 'source_url', 'license', 'license_url', 'attribution', 'tile_size']) form.set(k, item[k] ?? '');
+  if (!['props', 'characters', 'scenes'].includes(item.category)) throw Error('bad category ' + item.category);
+  if (item.category === 'characters' && !b.animations.length) throw Error('character without animation clips: ' + item.slug);
+  form.set('category', 'props'); // validated here as props; the real top-level category (props|characters|scenes) is applied below
   form.set('colour', b.colour); form.set('tags', item.tags.join(', ')); form.set('published', '1');
   const meta = metadata(form);
   const id = randomUUID(), prefix = `assets/${id}/${randomUUID()}`;
@@ -30,7 +33,7 @@ const errors = await pool(batch, arg('concurrency', 4), async item => {
   await cf.put(keys.model_key, model, 'model/gltf-binary');
   await cf.put(keys.preview_key, previewBuf, animated ? 'image/gif' : 'image/png');
   if (animated) await cf.put(keys.poster_key, poster, 'image/png');
-  const row = { ...meta, id, tags: JSON.stringify(meta.tags), ...keys, model_bytes: model.byteLength, preview_animated: animated ? 1 : 0, animations: JSON.stringify(b.animations), rigged: b.rigged };
+  const row = { ...meta, category: item.category, id, tags: JSON.stringify(meta.tags), ...keys, model_bytes: model.byteLength, preview_animated: animated ? 1 : 0, animations: JSON.stringify(b.animations), rigged: b.rigged };
   const fields = Object.keys(row);
   await cf.query(`INSERT INTO assets (${fields.join(',')}) VALUES (${fields.map(() => '?').join(',')})`, Object.values(row));
   ledger[item.slug] = { id, ...keys, at: new Date().toISOString(), item };

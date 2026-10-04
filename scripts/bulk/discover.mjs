@@ -3,7 +3,7 @@
 import { readdir, stat } from 'node:fs/promises';
 import { resolve, relative, basename, extname, dirname } from 'node:path';
 import { path, readJson, writeJson, progress } from './lib/common.mjs';
-import { getIO, stats } from './lib/gltf.mjs';
+import { getIO, stats, readModel, clips } from './lib/gltf.mjs';
 import { SOURCES } from './sources.mjs';
 const want = process.argv.slice(2);
 const walk = async dir => { const out = []; for (const e of await readdir(dir, { withFileTypes: true })) { const p = resolve(dir, e.name); if (e.isDirectory()) out.push(...await walk(p)); else out.push(p); } return out; };
@@ -20,7 +20,7 @@ for (const src of SOURCES) {
       const name = src.nameOf(file);
       if (!name || seen.has(name.toLowerCase())) continue; seen.add(name.toLowerCase());
       const key = relative(path('ex'), file); let s = cache[key];
-      if (!s) { try { s = stats(await io.read(file)); } catch (e) { s = { error: e.message }; } cache[key] = s; }
+      if (!s) { try { { const d = await readModel(file); s = { ...stats(d), clips: clips(d) }; } } catch (e) { s = { error: e.message }; } cache[key] = s; }
       all.push({ id: `${src.id}/${pack}/${name}`, source: src.id, pack, name, file: key, ...s });
     }
     console.log(src.id, pack, picked.length);
