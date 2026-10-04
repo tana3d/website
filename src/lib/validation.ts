@@ -33,8 +33,11 @@ export function metadata(form: FormData) {
   const source_url = link(field(form,'source_url'),'Source');
   const license_url = link(field(form,'license_url'),'License');
   if (license !== 'CC0' && (!creator || !license_url || !attribution)) throw new Error('This license requires a creator, license URL and attribution text.');
+  const rawCategory=field(form,'category');
+  const category=['vehicles','nature','environments'].includes(rawCategory)?'props':rawCategory;
+  if(category!==rawCategory && !tags.includes(rawCategory) && tags.length<16)tags.push(rawCategory);
   return { name, slug, description: text(field(form,'description'),'Description',1,4000), tags,
-    category: option(field(form,'category'),CATEGORIES,'category'), license, creator, source_url, license_url, attribution,
+    category: option(category,CATEGORIES,'category'), license, creator, source_url, license_url, attribution,
     tile_size: option(field(form,'tile_size') || 'small',SIZES,'tile size'), colour, published: field(form,'published') === '1' ? 1 : 0 };
 }
 export async function inspectModel(file: File) {

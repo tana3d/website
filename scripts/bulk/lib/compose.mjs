@@ -11,6 +11,7 @@ export class SceneBuilder {
   constructor(name) { this.doc = new Document(); this.doc.createBuffer(); this.scene = this.doc.createScene(name); this.templates = new Map(); this.count = 0; this.placed = []; this.root = this.doc.createNode(name); this.scene.addChild(this.root); }
   async template(file) {
     if (this.templates.has(file)) return this.templates.get(file);
+    const pending=(async()=>{
     const src = await readModel(resolve(path('ex'), file));
     const map = mergeDocuments(this.doc, src);
     const added = [...src.getRoot().listScenes()].map(sc => map.get(sc));
@@ -20,7 +21,10 @@ export class SceneBuilder {
     for (const m of src.getRoot().listMeshes()) for (const pr of map.get(m).listPrimitives()) { pr.setAttribute('JOINTS_0', null); pr.setAttribute('WEIGHTS_0', null); }
     const holder = this.doc.createNode('tpl'); for (const sc of added) { for (const c of sc.listChildren()) { sc.removeChild(c); holder.addChild(c); } sc.dispose(); }
     const info = { node: holder };
-    this.templates.set(file, info); return info;
+    return info;
+    })();
+    this.templates.set(file,pending);
+    return pending;
   }
   clone(node) {
     const n = this.doc.createNode(node.getName()).setTranslation(node.getTranslation()).setRotation(node.getRotation()).setScale(node.getScale());

@@ -44,7 +44,7 @@ const famKey = (concept, title = '') => {
 const FAMILY_CAP = key => key === 'family:chair' || key === 'family:armchair' || key === 'family:sofa' ? 3 : key === 'family:stool' ? 3 : key.startsWith('family:table:') ? 3 : null;
 const famBase = new Map(); const bump = k => famBase.set(k, (famBase.get(k) ?? 0) + 1);
 for (const r of existing) bump(famKey(r.name, r.name));
-for (const p of pinned) bump(famKey(p.concept ?? p.name, p.name));
+// Existing rows already include the pinned ledger; count them once.
 const named = pool.filter(p => !DEFERRED_SOURCES.has(p.source) && !pinnedIds.has(p.id) && !EXCLUDE_PACKS.has(p.pack) && !/decal/i.test(names[p.id]?.concept ?? '') && !/decal/i.test(p.name)).filter(p => names[p.id] && !names[p.id].skip && KEEP_CHARACTER(p) && !(p.source === 'polyhaven' && existingSources.has(`https://polyhaven.com/a/${p.pack}`)));
 // Group by concept, interleave packs, apply caps.
 const byConcept = new Map();

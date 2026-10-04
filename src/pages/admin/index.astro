@@ -10,6 +10,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
       <aside class="asset-list-panel"><label for="admin-search" class="sr-only">Search your assets</label><input id="admin-search" type="search" placeholder="Search assets…" /><div id="admin-list" aria-label="Your assets"></div><div class="list-pagination"><button id="previous" type="button">← Previous</button><span id="page-count"></span><button id="next" type="button">Next →</button></div></aside>
       <form id="asset-form" class="asset-form">
         <div class="form-top"><h2 id="form-title">New asset</h2><span id="model-info">GLB · up to 32 MB</span></div>
+        <div class="source-import"><label for="source-link">Start with a source link<input id="source-link" type="url" placeholder="Paste a Sketchfab, Kenney, Quaternius or Poly Haven asset link" /></label><button id="read-source" type="button">Fill in details</button><p id="source-status" aria-live="polite">Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your GLB and preview.</p></div>
         <div class="upload-grid">
           <label class="upload-field">3D model<input type="file" name="model" accept=".glb" /><small>Self-contained .glb. Rig and animations are detected automatically.</small></label>
           <label class="upload-field">Thumbnail or GIF<input type="file" name="preview" accept=".png,.jpg,.jpeg,.webp,.gif" /><small>Shown in the grid. Up to 8 MB.</small><img id="preview-image" alt="Current asset preview" hidden /></label>
@@ -22,7 +23,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
         <fieldset><legend>License & credits</legend><div class="fields-two"><label>License<select name="license">{LICENSES.map(l=><option>{l}</option>)}</select></label><label>Creator<input name="creator" maxlength="200" /></label></div><div class="fields-two"><label>Source URL<input name="source_url" type="url" placeholder="https://…" /></label><label>License URL<input name="license_url" type="url" placeholder="https://creativecommons.org/…" /></label></div><label>Attribution<textarea name="attribution" rows="2" maxlength="2000" placeholder="Credits and any modifications made to the original asset."></textarea></label></fieldset>
         <div class="save-row"><label class="check-label"><input type="checkbox" name="published" value="1" />Publish in the public library</label><button type="submit" class="primary" id="save-asset">Save asset</button></div>
         <progress id="upload-progress" max="100" value="0" hidden></progress>
-        <p id="save-status" role="status" aria-live="polite"></p>
+        <p id="save-status" role="status" aria-live="polite" data-state=""></p>
         <a id="view-asset" hidden>View asset ↗</a>
       </form>
     </div>
@@ -37,9 +38,13 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   const search=document.querySelector<HTMLInputElement>('#admin-search')!;
   const save=document.querySelector<HTMLButtonElement>('#save-asset')!;
   const progress=document.querySelector<HTMLProgressElement>('#upload-progress')!;
+  const sourceLink=document.querySelector<HTMLInputElement>('#source-link')!;
+  const readSource=document.querySelector<HTMLButtonElement>('#read-source')!;
+  const sourceStatus=document.querySelector<HTMLElement>('#source-status')!;
+  let sourceRevision=0;
   let id='', page=1, pages=1, slugTouched=false, busy=false, previewUrl='';
   const control=(name:string)=>form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-  function reset() { if(busy)return; form.reset(); id=''; slugTouched=false; preview.hidden=true; status.textContent=''; document.querySelector('#form-title')!.textContent='New asset'; document.querySelector('#model-info')!.textContent='GLB · up to 32 MB'; document.querySelector<HTMLAnchorElement>('#view-asset')!.hidden=true; control('model').required=true;control('preview').required=true; }
+  function reset() { if(busy)return; form.reset();sourceRevision++;readSource.disabled=false;sourceStatus.textContent='Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your GLB and preview.'; id=''; slugTouched=false; preview.hidden=true; status.textContent='';status.dataset.state=''; document.querySelector('#form-title')!.textContent='New asset'; document.querySelector('#model-info')!.textContent='GLB · up to 32 MB'; document.querySelector<HTMLAnchorElement>('#view-asset')!.hidden=true; control('model').required=true;control('preview').required=true; }
   function edit(asset:Asset) {
     if(busy)return;reset();id=asset.id;slugTouched=true;
     for(const name of ['name','slug','description','category','tile_size','colour','license','creator','source_url','license_url','attribution']) control(name).value=String(asset[name as keyof Asset]);
@@ -53,7 +58,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   async function load() {
     const revision=++loadRevision;
     try {
-      const response=await fetch(`/api/admin/assets?q=${encodeURIComponent(search.value)}&page=${page}`);
+      const response=await fetch(`/api/admin/assets?q=${encodeURIComponent(search.value)}&page=${page}`,{cache:'no-store'});
       if(!response.ok)throw new Error('Could not load your assets.');
       const data=await response.json();if(revision!==loadRevision)return;pages=data.pages;list.replaceChildren();
       for(const asset of data.assets as Asset[]) {
@@ -66,8 +71,25 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
       document.querySelector('#page-count')!.textContent=`${data.total} assets · ${page}/${pages||1}`;
       document.querySelector<HTMLButtonElement>('#previous')!.disabled=page<=1;
       document.querySelector<HTMLButtonElement>('#next')!.disabled=page>=pages;
-    } catch(error) { status.textContent=String(error); }
+    } catch(error) { if(revision===loadRevision)list.textContent=String(error); }
   }
+  async function fillSource() {
+    if(busy || readSource.disabled || !sourceLink.value.trim())return;
+    const revision=++sourceRevision;readSource.disabled=true;sourceStatus.textContent='Reading source details…';
+    try {
+      const response=await fetch('/api/admin/source',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:sourceLink.value.trim()}),cache:'no-store'});
+      const data=await response.json();if(revision!==sourceRevision)return;
+      if(!response.ok)throw new Error(data.error || 'The source could not be read.');
+      const source=data.source;
+      for(const name of ['name','slug','description','category','license','creator','source_url','license_url','attribution'])control(name).value=source[name];
+      control('tags').value=source.tags.join(', ');slugTouched=true;
+      sourceStatus.textContent=`Details filled from ${source.provider}. Review them, then upload your model and preview.${source.warnings.length?' '+source.warnings.join(' '):''}`;
+    }catch(error){if(revision===sourceRevision)sourceStatus.textContent=error instanceof Error?error.message:String(error);}
+    finally{if(revision===sourceRevision)readSource.disabled=false;}
+  }
+  readSource.addEventListener('click',()=>void fillSource());
+  sourceLink.addEventListener('change',()=>void fillSource());
+  sourceLink.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();void fillSource();}});
   document.querySelector('#new-asset')!.addEventListener('click',reset);
   document.querySelector('#previous')!.addEventListener('click',()=>{page--;void load();});document.querySelector('#next')!.addEventListener('click',()=>{page++;void load();});
   let timer:ReturnType<typeof setTimeout>;search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{page=1;void load();},250);});
@@ -75,13 +97,23 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   control('name').addEventListener('input',()=>{if(!slugTouched)control('slug').value=control('name').value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');});
   control('preview').addEventListener('change',()=>{const file=(control('preview') as HTMLInputElement).files?.[0];if(file){if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(file);preview.src=previewUrl;preview.hidden=false;}});
   form.addEventListener('submit',event=>{
-    event.preventDefault();if(busy)return;busy=true;save.disabled=true;status.textContent='Uploading…';progress.hidden=false;progress.value=0;
+    event.preventDefault();if(busy || readSource.disabled)return;
+    if(control('license').value!=='CC0' && !control('attribution').value.trim() && control('creator').value.trim() && control('source_url').value && control('license_url').value)control('attribution').value=`“${control('name').value}” by ${control('creator').value} (${control('source_url').value}), licensed under ${control('license').value} (${control('license_url').value}).`;
+    busy=true;save.disabled=true;status.dataset.state='pending';status.textContent='Uploading…';progress.hidden=false;progress.value=0;
     const data=new FormData(form);data.set('published',(control('published') as HTMLInputElement).checked?'1':'0');
     const xhr=new XMLHttpRequest();xhr.open(id?'PUT':'POST','/api/admin/assets'+(id?'/'+id:''));xhr.responseType='json';
     xhr.upload.onprogress=event=>{if(event.lengthComputable)progress.value=100*event.loaded/event.total;};
     const done=()=>{busy=false;save.disabled=false;progress.hidden=true;};
-    xhr.onload=()=>{done();if(xhr.status<200||xhr.status>=300){status.textContent=xhr.response?.error??'The upload could not be saved. Please try again.';return;}const asset=xhr.response.asset as Asset;edit(asset);status.textContent=asset.published?'Published. Your asset is now in the library.':'Saved as a draft.';void load();};
-    xhr.onerror=()=>{done();status.textContent='Connection interrupted. Please try again.';};xhr.send(data);
+    xhr.onload=async()=>{
+      if(xhr.status<200||xhr.status>=300 || !xhr.response?.asset?.id){done();status.dataset.state='error';status.textContent='Not saved: '+(xhr.response?.error??'The upload could not be saved. Please try again.');return;}
+      const asset=xhr.response.asset as Asset;
+      try {
+        const response=await fetch('/api/admin/assets/'+encodeURIComponent(asset.id),{cache:'no-store'});
+        const result=await response.json();if(!response.ok || result.asset?.id!==asset.id)throw new Error('Could not verify the saved record.');
+        done();edit(result.asset);search.value=asset.name;page=1;status.dataset.state='success';status.textContent=asset.published?'Published. Your asset is now in the library.':'Saved as a draft.';void load();
+      }catch{done();id=asset.id;status.dataset.state='error';status.textContent='The server accepted the upload, but its saved record could not be verified. Refresh the asset list before trying again.';}
+    };
+    xhr.onerror=()=>{done();status.dataset.state='error';status.textContent='Save not confirmed: connection interrupted. Your selected files are still here. Please try again.';};xhr.send(data);
   });
   reset();void load();
 </script>
@@ -98,6 +130,10 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   .admin-shell small { display:block; color:var(--ink-faint); font-size:12px; font-weight:400; margin-top:5px; line-height:1.3; }
   .form-top,.save-row { display:flex; justify-content:space-between; align-items:center; gap:16px; }
   .form-top h2 { font-size:22px; } #model-info { max-width:60%; overflow-wrap:anywhere; font-size:12px; color:var(--ink-faint); }
+  .source-import { display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin:20px 0;background:var(--rule-soft);padding:16px;border-radius:10px; }
+  .source-import label { margin:0; } .source-import button { min-height:42px; } #source-status { grid-column:1/-1;font-weight:400;font-size:13px;color:var(--ink-soft);margin:0; }
+  #save-status[data-state="error"] { border-left:3px solid #c45a50;padding:10px;background:var(--rule-soft);font-weight:700; }
+  #save-status[data-state="success"] { font-weight:700; }
   .upload-grid,.fields-three { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
   .fields-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
   .upload-grid { margin:22px 0 10px; } .upload-field { background:var(--rule-soft); padding:12px; border-radius:10px; } .upload-field input { font-size:12px!important; padding:8px!important; }
