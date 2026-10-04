@@ -9,10 +9,10 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
     <div class="admin-columns">
       <aside class="asset-list-panel"><label for="admin-search" class="sr-only">Search your assets</label><input id="admin-search" type="search" placeholder="Search assets…" /><div id="admin-list" aria-label="Your assets"></div><div class="list-pagination"><button id="previous" type="button">← Previous</button><span id="page-count"></span><button id="next" type="button">Next →</button></div></aside>
       <form id="asset-form" class="asset-form">
-        <div class="form-top"><h2 id="form-title">New asset</h2><span id="model-info">GLB · up to 32 MB</span></div>
-        <div class="source-import"><label for="source-link">Start with a source link<input id="source-link" type="url" placeholder="Paste a Sketchfab, Kenney, Quaternius or Poly Haven asset link" /></label><button id="read-source" type="button">Fill in details</button><p id="source-status" aria-live="polite">Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your GLB and preview.</p></div>
+        <div class="form-top"><h2 id="form-title">New asset</h2><span id="model-info">GLB · 32 MB / source package · 80 MB</span></div>
+        <div class="source-import"><label for="source-link">Start with a source link<input id="source-link" type="url" placeholder="Paste a Sketchfab, Kenney, Quaternius or Poly Haven asset link" /></label><button id="read-source" type="button">Fill in details</button><p id="source-status" aria-live="polite">Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your model or ZIP and preview.</p></div>
         <div class="upload-grid">
-          <label class="upload-field">3D model<input type="file" name="model" accept=".glb" /><small>Self-contained .glb. Rig and animations are detected automatically.</small></label>
+          <label class="upload-field">3D model or asset ZIP<input type="file" name="model" accept=".glb,.blend,.zip,.fbx,.obj,.gltf,.stl,.ply,.usd,.usda,.usdc,.usdz" /><small>Upload a GLB, or convert a source model up to 80 MB. Include textures in its ZIP. Rig and animations are detected automatically.</small></label>
           <label class="upload-field">Thumbnail or GIF<input type="file" name="preview" accept=".png,.jpg,.jpeg,.webp,.gif" /><small>Shown in the grid. Up to 8 MB.</small><img id="preview-image" alt="Current asset preview" hidden /></label>
           <label class="upload-field">Still thumbnail<input type="file" name="poster" accept=".png,.jpg,.jpeg,.webp" /><small>Required alongside a GIF; used when visitors prefer reduced motion.</small></label>
         </div>
@@ -25,6 +25,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
         <progress id="upload-progress" max="100" value="0" hidden></progress>
         <p id="save-status" role="status" aria-live="polite" data-state=""></p>
         <a id="view-asset" hidden>View asset ↗</a>
+        <section id="conversion-jobs" aria-label="Recent model conversions" hidden><h3>Model conversions</h3><div id="conversion-list"></div></section>
       </form>
     </div>
   </section>
@@ -43,8 +44,29 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
   const sourceStatus=document.querySelector<HTMLElement>('#source-status')!;
   let sourceRevision=0;
   let id='', page=1, pages=1, slugTouched=false, busy=false, previewUrl='';
+  type Job={id:string;name:string;state:string;asset_id:string|null;error:string;warnings:string[];elapsed_ms:number|null};
+  const delay=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+  const stage=(job:Job)=>({queued:'Waiting to convert…',converting:'Converting model and textures…',saving:'Validating and saving…',ready:'Ready',failed:'Conversion failed'}[job.state]??job.state);
+  async function loadJobs(){
+    try{
+      const response=await fetch('/api/admin/imports',{cache:'no-store'});if(!response.ok)return;
+      const {jobs}=await response.json() as {jobs:Job[]};const section=document.querySelector<HTMLElement>('#conversion-jobs')!,list=document.querySelector('#conversion-list')!;
+      section.hidden=!jobs.length;list.replaceChildren();
+      for(const job of jobs){const row=document.createElement('div');row.className='conversion-row';const title=document.createElement('strong'),text=document.createElement('p');title.textContent=job.name;text.textContent=stage(job)+(job.state==='failed'?': '+job.error:job.state==='ready'&&job.elapsed_ms?' · '+Math.round(job.elapsed_ms/1000)+' seconds':'');row.append(title,text);if(!['ready','failed'].includes(job.state)){const bar=document.createElement('progress');bar.setAttribute('aria-label',job.name+' conversion');row.append(bar);}else if(job.warnings.length){const warning=document.createElement('p');warning.textContent=job.warnings.join(' ');row.append(warning);}list.append(row);}
+    }catch{/* Keep the form and selected files if a background refresh fails. */}
+  }
+  async function waitForImport(job:Job){
+    while(!['ready','failed'].includes(job.state)){
+      progress.removeAttribute('value');status.dataset.state='pending';status.textContent=stage(job);void loadJobs();
+      await delay(1500);const response=await fetch('/api/admin/imports/'+job.id,{cache:'no-store'});
+      if(!response.ok)throw new Error('Progress could not be refreshed. Your upload is retained; its status appears under Model conversions.');
+      job=(await response.json()).job;
+    }
+    void loadJobs();if(job.state==='failed')throw new Error(job.error||'Conversion failed.');
+    return {id:job.asset_id!,warnings:job.warnings};
+  }
   const control=(name:string)=>form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-  function reset() { if(busy)return; form.reset();sourceRevision++;readSource.disabled=false;sourceStatus.textContent='Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your GLB and preview.'; id=''; slugTouched=false; preview.hidden=true; status.textContent='';status.dataset.state=''; document.querySelector('#form-title')!.textContent='New asset'; document.querySelector('#model-info')!.textContent='GLB · up to 32 MB'; document.querySelector<HTMLAnchorElement>('#view-asset')!.hidden=true; control('model').required=true;control('preview').required=true; }
+  function reset() { if(busy)return; form.reset();sourceRevision++;readSource.disabled=false;sourceStatus.textContent='Paste a link to fill the title, description, tags, creator, licence and credits. Then upload your model or ZIP and preview.'; id=''; slugTouched=false; preview.hidden=true; status.textContent='';status.dataset.state=''; document.querySelector('#form-title')!.textContent='New asset'; document.querySelector('#model-info')!.textContent='GLB · 32 MB / source package · 80 MB'; document.querySelector<HTMLAnchorElement>('#view-asset')!.hidden=true; control('model').required=true;control('preview').required=true; }
   function edit(asset:Asset) {
     if(busy)return;reset();id=asset.id;slugTouched=true;
     for(const name of ['name','slug','description','category','tile_size','colour','license','creator','source_url','license_url','attribution']) control(name).value=String(asset[name as keyof Asset]);
@@ -67,7 +89,7 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
         const text=document.createElement('span');text.textContent=asset.name;
         const state=document.createElement('small');state.textContent=asset.published?'published':'draft';text.append(state);button.append(img,text);button.addEventListener('click',()=>edit(asset));list.append(button);
       }
-      if(!data.total)list.textContent='No assets yet. Start with a GLB and a preview.';
+      if(!data.total)list.textContent='No assets yet. Start with a model and a preview.';
       document.querySelector('#page-count')!.textContent=`${data.total} assets · ${page}/${pages||1}`;
       document.querySelector<HTMLButtonElement>('#previous')!.disabled=page<=1;
       document.querySelector<HTMLButtonElement>('#next')!.disabled=page>=pages;
@@ -105,19 +127,24 @@ import { CATEGORIES, LICENSES, SIZES } from '../../lib/validation';
     xhr.upload.onprogress=event=>{if(event.lengthComputable)progress.value=100*event.loaded/event.total;};
     const done=()=>{busy=false;save.disabled=false;progress.hidden=true;};
     xhr.onload=async()=>{
-      if(xhr.status<200||xhr.status>=300 || !xhr.response?.asset?.id){done();status.dataset.state='error';status.textContent='Not saved: '+(xhr.response?.error??'The upload could not be saved. Please try again.');return;}
-      const asset=xhr.response.asset as Asset;
+      if(xhr.status<200||xhr.status>=300 || (!xhr.response?.asset?.id&&!xhr.response?.job?.id)){done();status.dataset.state='error';status.textContent='Not saved: '+(xhr.response?.error??'The upload could not be saved. Please try again.');return;}
+      let assetId=xhr.response.asset?.id as string|undefined;
       try {
-        const response=await fetch('/api/admin/assets/'+encodeURIComponent(asset.id),{cache:'no-store'});
-        const result=await response.json();if(!response.ok || result.asset?.id!==asset.id)throw new Error('Could not verify the saved record.');
-        done();edit(result.asset);search.value=asset.name;page=1;status.dataset.state='success';status.textContent=asset.published?'Published. Your asset is now in the library.':'Saved as a draft.';void load();
-      }catch{done();id=asset.id;status.dataset.state='error';status.textContent='The server accepted the upload, but its saved record could not be verified. Refresh the asset list before trying again.';}
+        const conversion=xhr.response.job?await waitForImport(xhr.response.job):null;assetId=conversion?.id??assetId;
+        const response=await fetch('/api/admin/assets/'+encodeURIComponent(assetId!),{cache:'no-store'});
+        const result=await response.json();if(!response.ok || result.asset?.id!==assetId)throw new Error('Could not verify the saved record.');
+        const asset=result.asset as Asset;done();edit(asset);search.value=asset.name;page=1;status.dataset.state='success';status.textContent=(asset.published?'Published. Your asset is now in the library.':'Saved as a draft.')+(conversion?.warnings.length?' '+conversion.warnings.join(' '):'');void load();
+      }catch(error){done();if(assetId)id=assetId;status.dataset.state='error';status.textContent=error instanceof Error?error.message:'The saved record could not be verified. Check Model conversions before trying again.';}
     };
     xhr.onerror=()=>{done();status.dataset.state='error';status.textContent='Save not confirmed: connection interrupted. Your selected files are still here. Please try again.';};xhr.send(data);
   });
-  reset();void load();
+  reset();void load();void loadJobs();const jobsTimer=setInterval(()=>{if(document.visibilityState==='visible')void loadJobs();},5000);window.addEventListener('pagehide',()=>clearInterval(jobsTimer),{once:true});
 </script>
 <style is:global>
+  #conversion-jobs { margin-top:24px; padding-top:16px; border-top:1px solid var(--rule); }
+  .conversion-row { margin:12px 0; padding:10px; border-radius:8px; background:var(--rule-soft); }
+  .conversion-row p { margin:5px 0; font-size:13px; }
+  .conversion-row progress,#upload-progress { width:100%; height:6px; accent-color:var(--ink); }
   .admin-shell { max-width:1320px; margin:24px auto; padding:0 24px; font-family:'Atkinson',sans-serif; font-size:15px; }
   .admin-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:28px; }
   .admin-actions { display:flex; gap:10px; align-items:center; }

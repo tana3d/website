@@ -193,3 +193,24 @@ The Studio card uses the OpenAI blossom icon from Simple Icons v13 beside
 ChatGPT; the icon represents its respective owner.
 
 Asset download counts start at zero when migration 0002 is applied. The explicit `/api/assets/<id>/download` endpoint counts model downloads served by the website or desktop app; preview/model-viewer media requests and HEAD requests do not count. Counts represent downloads served, not unique people or proof that a browser finished saving a file. No personal identifiers are collected.
+
+## Source model conversion
+
+Admin uploads accept Blender, FBX, OBJ, glTF, STL, PLY, USD and ZIP asset
+packages, in addition to GLB. Include accompanying textures and buffers in a ZIP
+containing one model. Source uploads are limited to 80 MB, extracted packages to
+512 MB, and converted GLBs to 32 MB. Characters still need animation to publish.
+
+A private R2 upload and D1 job are created first. A Durable Object alarm runs a
+single Blender 4.5 LTS container, validates the converted GLB, then saves the
+catalog asset. The public library never serves an unfinished source upload. The
+admin form shows upload progress followed by an indeterminate conversion bar;
+recent conversion states survive refreshes. Failed jobs retain their source and
+show their error. Originals and textures remain private in R2 for future editing.
+
+Cloudflare's existing Git build deploys the Worker and Dockerfile together.
+Apply migration `0004_import_jobs.sql` before the first deployment. Workers Paid
+and Containers access are required. The converter has no outbound internet,
+disables embedded Python scripts, runs without root and sleeps after 30 seconds
+of inactivity. Complex Blender-specific materials may need baking, and warnings
+are displayed rather than promising perfect conversion of every Blender feature.

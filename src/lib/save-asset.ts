@@ -1,16 +1,23 @@
-import { metadata, inspectModel, inspectImage, BODY_LIMIT } from './validation';
-import { fromRow, type AssetRow, type Bindings } from './types';
+import { metadata, inspectModel, inspectImage, BODY_LIMIT } from './validation.ts';
+import { fromRow, type AssetRow, type Bindings } from './types.ts';
 
 const file = (form: FormData,name: string) => { const f=form.get(name); return f instanceof File && f.size ? f : null; };
 export async function saveAsset(request: Request, env: Bindings, existingId?: string) {
+  try { return await saveAssetForm(await readUploadForm(request,BODY_LIMIT), env, existingId); }
+  catch(error){return Response.json({error:error instanceof Error?error.message:'Upload failed.'},{status:400});}
+}
+export async function readUploadForm(request:Request,limit:number){
+  if (!request.headers.get('Content-Type')?.startsWith('multipart/form-data;')) throw new Error('Submit this form with multipart/form-data.');
+  const message=`Upload exceeds the ${Math.round(limit/1024/1024)} MB total limit.`;
+  if(Number(request.headers.get('Content-Length'))>limit)throw new Error(message);
+  let bytes=0;
+  const body=request.body?.pipeThrough(new TransformStream({transform(chunk,controller){bytes+=chunk.byteLength;if(bytes>limit)throw new Error(message);controller.enqueue(chunk);}}));
+  return new Response(body,{headers:{'Content-Type':request.headers.get('Content-Type')!}}).formData();
+}
+export async function saveAssetForm(form:FormData,env:Bindings,existingId?:string,assignedId?:string){
   const newKeys: string[] = [];
   let committed = false;
   try {
-    if (!request.headers.get('Content-Type')?.startsWith('multipart/form-data;')) throw new Error('Submit this form with multipart/form-data.');
-    if (Number(request.headers.get('Content-Length')) > BODY_LIMIT) throw new Error('Upload exceeds the 48 MB total limit.');
-    let bytes=0;
-    const body=request.body?.pipeThrough(new TransformStream({ transform(chunk,controller) { bytes+=chunk.byteLength; if(bytes>BODY_LIMIT) throw new Error('Upload exceeds the 48 MB total limit.'); controller.enqueue(chunk); } }));
-    const form=await new Response(body,{headers:{'Content-Type':request.headers.get('Content-Type')!}}).formData();
     const meta=metadata(form);
     const existing=existingId ? await env.DB.prepare('SELECT * FROM assets WHERE id=?').bind(existingId).first<AssetRow>() : null;
     if (existingId && !existing) return Response.json({error:'Asset not found.'},{status:404});
@@ -23,7 +30,7 @@ export async function saveAsset(request: Request, env: Bindings, existingId?: st
     const previewInfo=preview ? await inspectImage(preview) : null;
     const posterInfo=poster ? await inspectImage(poster,true) : null;
     if (previewInfo?.animated && !posterInfo && (!existing || existing.poster_key === existing.preview_key)) throw new Error('Add a still thumbnail alongside an animated preview.');
-    const id=existingId ?? crypto.randomUUID();
+    const id=existingId ?? assignedId ?? crypto.randomUUID();
     const revision=crypto.randomUUID();
     async function put(name: string, data: ArrayBuffer, mime: string) {
       const key=`assets/${id}/${revision}/${name}`;
