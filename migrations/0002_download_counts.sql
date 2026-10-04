@@ -1,0 +1,1 @@
+ALTER TABLE assets ADD COLUMN downloads INTEGER NOT NULL DEFAULT 0 CHECK (downloads >= 0);

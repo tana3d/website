@@ -9,7 +9,7 @@ const { asset } = Astro.props;
     <img src={mediaUrl(asset.preview_key)} alt={asset.name} loading="lazy" decoding="async" width="600" height="600" />
   </picture>
   <span class="tile-tag">{asset.category}{asset.preview_animated ? ' / animated' : ''}</span>
-  <span class="tile-footer">{asset.name}<span aria-hidden="true">↗</span></span>
+  <span class="tile-footer"><span class="tile-name">{asset.name}</span><span class="tile-downloads" aria-label={`${asset.downloads.toLocaleString()} downloads`}>↓ {asset.downloads.toLocaleString()}</span><span aria-hidden="true">↗</span></span>
 </a>
 <style>
   .asset-tile { position:relative; display:block; width:100%; height:100%; overflow:hidden; color:#263b35; }
@@ -18,5 +18,7 @@ const { asset } = Astro.props;
   .asset-tile:hover img { transform:scale(1.05); }
   .tile-tag { position:absolute; top:12px; left:16px; font-size:11px; opacity:.65; }
   .tile-footer { position:absolute; bottom:12px; left:16px; right:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; line-height:1.2; }
+  .tile-name { min-width:0; flex:1; }
+  .tile-downloads { white-space:nowrap; font-size:10px; opacity:.75; }
   @media(prefers-reduced-motion:reduce) { img { transition:none; } .asset-tile:hover img { transform:none; } }
 </style>

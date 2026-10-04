@@ -191,3 +191,5 @@ animation-label changes in Studio; Cesium's logo has separate trademark rights.
 
 The Studio card uses the OpenAI blossom icon from Simple Icons v13 beside
 ChatGPT; the icon represents its respective owner.
+
+Asset download counts start at zero when migration 0002 is applied. The explicit `/api/assets/<id>/download` endpoint counts model downloads served by the website or desktop app; preview/model-viewer media requests and HEAD requests do not count. Counts represent downloads served, not unique people or proof that a browser finished saving a file. No personal identifiers are collected.

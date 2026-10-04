@@ -4,6 +4,7 @@ export interface Bindings {
   GITHUB_CLIENT_ID?: string; GITHUB_CLIENT_SECRET?: string; GITHUB_ADMIN_ID?: string; ADMIN_SESSION_SECRET?: string; LOCAL_ADMIN?: string;
 }
 export interface Asset {
+  downloads: number;
   id: string; slug: string; name: string; description: string;
   tags: string[]; category: string; license: string; creator: string;
   source_url: string; license_url: string; attribution: string;
@@ -12,6 +13,6 @@ export interface Asset {
   tile_size: string; colour: string; published: number; created_at: string; updated_at: string;
 }
 export type AssetRow = Omit<Asset, 'tags' | 'animations'> & { tags: string; animations: string };
-export const fromRow = (row: AssetRow): Asset => ({ ...row, tags: JSON.parse(row.tags), animations: JSON.parse(row.animations) });
+export const fromRow = (row: AssetRow): Asset => ({ ...row, downloads:row.downloads ?? 0, tags: JSON.parse(row.tags), animations: JSON.parse(row.animations) });
 export const mediaUrl = (key: string) => '/media/' + key.split('/').map(encodeURIComponent).join('/');
 export const fileSize = (bytes: number) => bytes < 1048576 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
