@@ -10,8 +10,8 @@ export function validateRelease(value:unknown):Release {
  const r=value as Release;
  if(r?.schema!==1||!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(r.version??'')||r.version.split('.').some(n=>!Number.isSafeInteger(Number(n)))||!/^\d+-\d+-[a-f\d]{12}$/.test(r.buildId??'')||!Number.isSafeInteger(r.buildNumber)||r.buildNumber<1||!/^[a-f\d]{40}$/.test(r.commit??'')||!Number.isFinite(Date.parse(r.publishedAt??'')))throw Error('Invalid release manifest.');
  if(!r.buildId.startsWith(`${r.buildNumber}-`)||!r.buildId.endsWith(r.commit.slice(0,12)))throw Error('Inconsistent release identity.');
- if(!Array.isArray(r.files)||r.files.length!==4||new Set(r.files.map(f=>f.platform)).size!==4||!Array.isArray(r.sources)||r.sources.length<2)throw Error('Incomplete release manifest.');
- if(r.updates!==undefined&&(!Array.isArray(r.updates)||r.updates.length!==4||new Set(r.updates.map(f=>f.target)).size!==4||new Set(r.updates.map(f=>f.key)).size!==4))throw Error('Incomplete signed updates.');
+ if(!Array.isArray(r.files)||![3,4].includes(r.files.length)||new Set(r.files.map(f=>f.platform)).size!==r.files.length||!['darwin-arm64','darwin-x64','linux-x64'].every(platform=>r.files.some(file=>file.platform===platform))||!Array.isArray(r.sources)||r.sources.length<2)throw Error('Incomplete release manifest.');
+ if(r.updates!==undefined&&(!Array.isArray(r.updates)||r.updates.length!==r.files.length||new Set(r.updates.map(f=>f.target)).size!==r.files.length||new Set(r.updates.map(f=>f.key)).size!==r.files.length||new Set(r.updates.map(f=>f.platform)).size!==r.files.length||r.updates.some(update=>!r.files.some(file=>file.platform===update.platform))))throw Error('Incomplete signed updates.');
  for(const file of [...r.files,...r.sources,...(r.updates??[])]){
   if(!/^[\w.-]+$/.test(file.filename??'')||file.key!==`releases/${r.buildId}/${file.filename}`||file.url!==`https://tana.gg/downloads/${file.key}`||!Number.isSafeInteger(file.bytes)||file.bytes<1||!/^[a-f\d]{64}$/.test(file.sha256??''))throw Error('Invalid release file.');
   if(r.files.includes(file)&&(!file.platform||labels[file.platform]!==file.label))throw Error('Invalid release platform.');

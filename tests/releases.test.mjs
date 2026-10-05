@@ -68,3 +68,12 @@ test('signed Mac bundles use the same resumable immutable download route',async(
  const key=release.updates[0].key,response=await releaseDownload(f.bindings,key,new Request('https://tana.gg/',{headers:{Range:'bytes=2-5'}}));
  assert.equal(response.status,206);assert.equal(await response.text(),'2345');assert.match(response.headers.get('content-disposition'),/app.tar.gz/);
 });
+
+test('Mac and Linux releases are complete without Windows; Windows update feed is empty',async()=>{
+ const release=signedManifest();release.files=release.files.filter(file=>file.platform!=='win32-x64');release.updates=release.updates.filter(file=>file.platform!=='win32-x64');
+ assert.equal(validateRelease(release).files.length,3);
+ const bindings={RELEASES:{get:async()=>({text:async()=>JSON.stringify(release)})}};
+ assert.equal((await updateResponse(bindings,'windows','x86_64','0.1.0')).status,204);
+ assert.equal((await updateResponse(bindings,'darwin','x86_64','0.1.0')).status,200);
+ release.updates.pop();assert.throws(()=>validateRelease(release),/Incomplete/);
+});
