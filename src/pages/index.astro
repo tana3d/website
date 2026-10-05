@@ -8,6 +8,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 import ProjectList from '../components/ProjectList.astro';
 import { env } from 'cloudflare:workers';
 import { listAssets } from '../lib/library';
+import { readRelease, type ReleaseBindings } from '../lib/releases';
 import type { Bindings } from '../lib/types';
 import '../styles/global.css'
 if (Astro.url.hostname==='admin.tana.gg') return Astro.rewrite('/admin');
@@ -15,6 +16,8 @@ if (['q','category','tag'].some(key=>Astro.url.searchParams.has(key))) return As
 let catalog = { assets: [], total: 0, page: 1, pages: 0 } as Awaited<ReturnType<typeof listAssets>>;
 let unavailable = false;
 try { catalog = await listAssets(env as unknown as Bindings, Astro.url.searchParams); } catch { unavailable = true; }
+let releaseVersion: string | null = null;
+try { releaseVersion = (await readRelease(env as unknown as ReleaseBindings))?.version ?? null; } catch { /* Keep the download link available if release storage is unavailable. */ }
 // Every visit gets a new shuffle, including refreshes through an edge cache.
 Astro.response.headers.set('Cache-Control','no-store');
 const nextParams = new URLSearchParams(Astro.url.searchParams);
@@ -29,7 +32,7 @@ nextParams.set('page',String(catalog.page + 1));
 	<body class="w-full ">
 		<Header />
 		<div class="p-0 w-screen m-0 max-w-full ">
-          <ProjectList projects={catalog.assets} />
+          <ProjectList projects={catalog.assets} releaseVersion={releaseVersion} />
           {unavailable ? <p class="library-message" role="status">The library is temporarily unavailable. Please try again shortly.</p> : !catalog.total ? <p class="library-message">{Astro.url.search ? 'No models matched. Try another search.' : 'The library is getting its first assets. Come back soon.'}</p> : null}
           {!unavailable && catalog.total > 0 && <div class="library-loader" data-library-loader data-page={catalog.page} data-pages={catalog.pages}>
             <p data-library-status role="status" aria-live="polite"></p>
