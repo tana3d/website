@@ -1,9 +1,12 @@
 ---
 import Layout from '../layouts/Page.astro';
-import release from '../data/releases.json';
+import { env } from 'cloudflare:workers';
+import { readRelease, emptyRelease, releaseSize, type ReleaseBindings } from '../lib/releases';
 import '../styles/download.css';
-interface ReleaseFile { platform: string; label: string; url: string; size?: string; sha256?: string; }
-const files=release.files as ReleaseFile[];
+let release;
+try{release=await readRelease(env as unknown as ReleaseBindings)??emptyRelease;}catch{release=emptyRelease;}
+Astro.response.headers.set('Cache-Control','no-store');
+const files=release.files;
 const primary=files[0];
 ---
 <Layout title="Download Studio — tana" description="Create worlds, direct characters, and turn performances into films with Tana Studio.">
@@ -20,11 +23,12 @@ const primary=files[0];
     </section>
     <figure class="shot"><div class="window"><img src="/download/studio.webp" width="1500" height="960" alt="Tana Studio with the AI conversation beside a 3D scene and layered performance timeline." /></div><figcaption class="meta">Development preview. Scene includes <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CesiumMan">Cesium Man, © 2017 Cesium</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; display scale and animation label adjusted.</figcaption></figure>
     <section class="canary" aria-labelledby="preview-title">
-      <div><h2 id="preview-title">Studio <span class="pill">preview</span></h2><p>A place to make a world and tell a story. Move between directing the action and framing your shot, then export your film.</p><p class="meta">The first desktop release will appear here when it’s ready.</p></div>
+      <div><h2 id="preview-title">Studio <span class="pill">preview</span></h2><p>A place to make a world and tell a story. Move between directing the action and framing your shot, then export your film.</p><p class="meta">{release.version ? 'Includes the local Blender converter. Choose the installer for your computer.' : 'The first desktop release will appear here when it’s ready.'}</p></div>
       <ul class="files" aria-label="Studio downloads">
-        {['macOS Apple Silicon','macOS Intel','Windows','Linux'].map(label=>{const file=files.find(f=>f.label===label);return <li><span><b>{label}</b><span class="sub">{file?.size ?? 'Installer not yet available'}</span></span>{file ? <a href={file.url}>Download ↓</a> : <span class="sub">coming soon</span>}</li>;})}
+        {['macOS Apple Silicon','macOS Intel','Windows','Linux'].map(label=>{const file=files.find(f=>f.label===label);return <li><span><b>{label}</b><span class="sub">{file ? releaseSize(file.bytes) : 'Installer not yet available'}</span></span>{file ? <a href={file.url}>Download ↓</a> : <span class="sub">coming soon</span>}</li>;})}
       </ul>
     </section>
+    {release.version && <details class="release-details"><summary>Checksums and source code</summary><ul>{files.map(file=><li><b>{file.label}</b><code>{file.sha256}</code></li>)}</ul><p>Studio is open source. The bundled Blender converter’s corresponding source is available with this release.</p><p>{release.sources.map(file=><a href={file.url}>{file.filename} ↓</a>)}</p></details>}
     <section class="notes" aria-label="What you can do in Studio"><div class="note"><h3>Build your world</h3>Bring in models from the library or import your own. Ask the assistant to find and place what you need.</div><div class="note"><h3>Direct the action</h3>Record character performances as layers. Rewind and watch them from another camera angle.</div><div class="note"><h3>Make the film</h3>Arrange camera views, split clips, add transitions, and export landscape or vertical video.</div></section>
   </main>
 </Layout>
@@ -32,4 +36,7 @@ const primary=files[0];
   .download-page { width:100%; max-width:none; padding-bottom:40px; margin:0; }
   .download-page :global(.hero) { margin:0 auto; }
   .download-page :global(.disabled) { opacity:.65; border:0; font:inherit; font-size:16px; }
+  .release-details {margin:32px auto;max-width:1000px;padding:0 24px;}
+  .release-details code {display:block;overflow-wrap:anywhere;font-size:12px;}
+  .release-details a {display:inline-block;margin:8px 24px 8px 0;}
 </style>

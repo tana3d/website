@@ -25,6 +25,10 @@
     {
       "binding": "LIBRARY",
       "bucket_name": "tana-assets"
+    },
+    {
+      "binding": "RELEASES",
+      "bucket_name": "tana-studio-releases"
     }
   ],
   "vars": {

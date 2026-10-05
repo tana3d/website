@@ -1,6 +1,6 @@
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 export interface Bindings {
-  DB: D1Database; LIBRARY: R2Bucket;
+  DB: D1Database; LIBRARY: R2Bucket; RELEASES?: R2Bucket;
   GITHUB_CLIENT_ID?: string; GITHUB_CLIENT_SECRET?: string; GITHUB_ADMIN_ID?: string; ADMIN_SESSION_SECRET?: string; LOCAL_ADMIN?: string;
 }
 export interface Asset {
