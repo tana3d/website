@@ -13,6 +13,7 @@
     "db:remote": "wrangler d1 migrations apply DB --remote",
     "seed:local": "node scripts/seed-local.mjs",
     "test:ui": "node tests/ui.mjs",
+    "test:download-ui": "node tests/download-platform-ui.mjs",
     "prepare:assets": "node scripts/prepare-starter-assets.mjs",
     "seed:cloudflare": "node scripts/seed-cloudflare.mjs"
   },
